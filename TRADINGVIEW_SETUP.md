@@ -256,3 +256,46 @@ Use Pine Script to create conditional signals:
 ```
 
 This setup will help you create comprehensive trading alerts that integrate seamlessly with your webhook application.
+
+
+
+#Testing with Your Secret
+#Update the Test Script
+#You can test with your custom secret by running:
+#node scripts/test-webhook.js http://localhost:5001/api/tradingview-alert your_custom_secret_here
+
+
+#Test with curl
+curl -X POST http://localhost:5001/api/tradingview-alert \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ticker": "AAPL",
+    "price": 175.23,
+    "signal": "BUY",
+    "strategy": "RSI Strategy",
+    "timestamp": "2025-01-17T10:30:00Z",
+    "custom_note": "Test alert",
+    "webhook_secret": "your_custom_secret_here"
+  }'
+
+  #TradingView Alert Configuration
+  {
+  "ticker": "{{ticker}}",
+  "price": {{close}},
+  "signal": "BUY",
+  "strategy": "My Strategy",
+  "timestamp": "{{time}}",
+  "custom_note": "Custom alert message",
+  "webhook_secret": "your_custom_secret_here"
+}
+
+#✅ Quick Setup Commands
+# 1. Create the environment file
+echo "TRADINGVIEW_WEBHOOK_SECRET=my_super_secure_secret_123" > .env.local
+
+# 2. Restart the server
+npm run dev
+
+# 3. Test with your new secret
+node scripts/test-webhook.js http://localhost:5001/api/tradingview-alert my_super_secure_secret_123
+
