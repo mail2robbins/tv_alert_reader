@@ -1,5 +1,6 @@
 import { TradingViewAlert } from '@/types/alert';
 import { DhanOrderResponse } from './dhanApi';
+import { PositionCalculation } from './fundManager';
 
 // Order tracking interface
 export interface PlacedOrder {
@@ -15,6 +16,10 @@ export interface PlacedOrder {
   status: 'pending' | 'placed' | 'failed' | 'cancelled';
   error?: string;
   dhanResponse?: DhanOrderResponse;
+  positionCalculation?: PositionCalculation;
+  orderValue: number;
+  leveragedValue: number;
+  positionSizePercentage: number;
 }
 
 // In-memory order storage for serverless environments
@@ -30,8 +35,13 @@ export function storePlacedOrder(
   alert: TradingViewAlert,
   alertId: string,
   quantity: number,
-  dhanResponse: DhanOrderResponse
+  dhanResponse: DhanOrderResponse,
+  positionCalculation?: PositionCalculation
 ): PlacedOrder {
+  const orderValue = alert.price * quantity;
+  const leveragedValue = positionCalculation?.leveragedValue || (orderValue / 2); // Default to 2x leverage
+  const positionSizePercentage = positionCalculation?.positionSizePercentage || 0;
+  
   const order: PlacedOrder = {
     id: generateOrderId(),
     alertId,
@@ -44,7 +54,11 @@ export function storePlacedOrder(
     orderId: dhanResponse.orderId,
     status: dhanResponse.success ? 'placed' : 'failed',
     error: dhanResponse.error,
-    dhanResponse
+    dhanResponse,
+    positionCalculation,
+    orderValue,
+    leveragedValue,
+    positionSizePercentage
   };
 
   memoryOrders.push(order);

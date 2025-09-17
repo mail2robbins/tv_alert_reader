@@ -1,4 +1,5 @@
 import { TradingViewAlert } from '@/types/alert';
+import { calculatePositionSize } from './fundManager';
 
 // Dhan.co API configuration
 const DHAN_API_BASE_URL = 'https://api.dhan.co/v2/super/orders';
@@ -82,16 +83,17 @@ function mapTickerToSecurityId(ticker: string): string {
   return ticker.toUpperCase();
 }
 
-// Place order on Dhan.co
+// Place order on Dhan.co with automatic position sizing
 export async function placeDhanOrder(
   alert: TradingViewAlert,
-  orderConfig: {
-    quantity: number;
+  orderConfig?: {
+    quantity?: number;
     exchangeSegment?: string;
     productType?: string;
     orderType?: string;
     targetPrice?: number;
     stopLossPrice?: number;
+    useAutoPositionSizing?: boolean;
   }
 ): Promise<DhanOrderResponse> {
   // Validate required environment variables
@@ -103,19 +105,49 @@ export async function placeDhanOrder(
     throw new Error('DHAN_CLIENT_ID environment variable is required');
   }
 
+  // Calculate position size
+  let quantity: number;
+  let positionCalculation;
+  
+  if (orderConfig?.useAutoPositionSizing !== false) {
+    // Use automatic position sizing based on fund management
+    positionCalculation = calculatePositionSize(alert.price);
+    
+    if (!positionCalculation.canPlaceOrder) {
+      return {
+        success: false,
+        error: `Cannot place order: ${positionCalculation.reason}`,
+        correlationId: generateCorrelationId()
+      };
+    }
+    
+    quantity = positionCalculation.calculatedQuantity;
+    console.log('Auto position sizing:', {
+      stockPrice: alert.price,
+      calculatedQuantity: quantity,
+      orderValue: positionCalculation.orderValue,
+      leveragedValue: positionCalculation.leveragedValue,
+      positionSizePercentage: positionCalculation.positionSizePercentage.toFixed(2) + '%'
+    });
+  } else {
+    // Use manual quantity
+    quantity = orderConfig?.quantity || 1;
+    console.log('Manual quantity:', quantity);
+  }
+
   // Prepare order request
   const orderRequest: DhanOrderRequest = {
     dhanClientId: DHAN_CLIENT_ID,
     correlationId: generateCorrelationId(),
     transactionType: mapSignalToTransactionType(alert.signal),
-    exchangeSegment: orderConfig.exchangeSegment || DHAN_EXCHANGE_SEGMENTS.NSE_EQ,
-    productType: orderConfig.productType || DHAN_PRODUCT_TYPES.CNC,
-    orderType: orderConfig.orderType || DHAN_ORDER_TYPES_ORDER.LIMIT,
+    exchangeSegment: orderConfig?.exchangeSegment || DHAN_EXCHANGE_SEGMENTS.NSE_EQ,
+    productType: orderConfig?.productType || DHAN_PRODUCT_TYPES.CNC,
+    orderType: orderConfig?.orderType || DHAN_ORDER_TYPES_ORDER.LIMIT,
     securityId: mapTickerToSecurityId(alert.ticker),
-    quantity: orderConfig.quantity,
+    quantity: quantity,
     price: alert.price,
-    targetPrice: orderConfig.targetPrice,
-    stopLossPrice: orderConfig.stopLossPrice
+    targetPrice: orderConfig?.targetPrice,
+    stopLossPrice: orderConfig?.stopLossPrice
   };
 
   try {
@@ -123,7 +155,7 @@ export async function placeDhanOrder(
       ticker: alert.ticker,
       signal: alert.signal,
       price: alert.price,
-      quantity: orderConfig.quantity,
+      quantity: quantity,
       correlationId: orderRequest.correlationId
     });
 

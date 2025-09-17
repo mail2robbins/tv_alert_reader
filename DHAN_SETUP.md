@@ -45,7 +45,7 @@ DHAN_ORDER_TYPE=LIMIT
 - **`AUTO_PLACE_ORDER`**: Set to `true` to automatically place orders on BUY signals
 - **`DEFAULT_ORDER_QUANTITY`**: Default number of shares to buy (default: 1)
 - **`DHAN_EXCHANGE_SEGMENT`**: Exchange segment (NSE_EQ, BSE_EQ, etc.)
-- **`DHAN_PRODUCT_TYPE`**: Product type (CNC, MIS, NRML)
+- **`DHAN_PRODUCT_TYPE`**: Product type (CNC, MTF, MARGIN, INTRADAY)
 - **`DHAN_ORDER_TYPE`**: Order type (LIMIT, MARKET, SL, SL_M)
 
 ## Step 3: Order Configuration Options

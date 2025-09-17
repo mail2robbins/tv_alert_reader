@@ -15,7 +15,7 @@ const testAlert = {
   webhook_secret: WEBHOOK_SECRET
 };
 
-// Test order placement payload
+// Test order placement payload with auto position sizing
 const testOrderPayload = {
   alert: {
     ticker: "RELIANCE",
@@ -24,7 +24,25 @@ const testOrderPayload = {
     strategy: "Dhan Integration Test",
     timestamp: new Date().toISOString()
   },
-  quantity: 1,
+  useAutoPositionSizing: true,
+  orderConfig: {
+    exchangeSegment: "NSE_EQ",
+    productType: "CNC",
+    orderType: "LIMIT"
+  }
+};
+
+// Test order placement payload with manual quantity
+const testManualOrderPayload = {
+  alert: {
+    ticker: "TCS",
+    price: 3500.00,
+    signal: "BUY",
+    strategy: "Manual Quantity Test",
+    timestamp: new Date().toISOString()
+  },
+  quantity: 2,
+  useAutoPositionSizing: false,
   orderConfig: {
     exchangeSegment: "NSE_EQ",
     productType: "CNC",
@@ -101,19 +119,30 @@ async function testDhanIntegration() {
     // Wait a moment for processing
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Test 2: Manual order placement
-    console.log('\n📡 Test 2: Manual Order Placement');
+    // Test 2: Auto position sizing order placement
+    console.log('\n📡 Test 2: Auto Position Sizing Order');
     await makeRequest(
       `${DEFAULT_URL}/api/place-order`,
       testOrderPayload,
-      'Manual Order Placed'
+      'Auto Position Sizing Order Placed'
     );
 
     // Wait a moment for processing
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Test 3: Fetch orders
-    console.log('\n📡 Test 3: Fetching Orders');
+    // Test 3: Manual quantity order placement
+    console.log('\n📡 Test 3: Manual Quantity Order');
+    await makeRequest(
+      `${DEFAULT_URL}/api/place-order`,
+      testManualOrderPayload,
+      'Manual Quantity Order Placed'
+    );
+
+    // Wait a moment for processing
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Test 4: Fetch orders
+    console.log('\n📡 Test 4: Fetching Orders');
     const ordersResponse = await fetch(`${DEFAULT_URL}/api/orders?includeStats=true`);
     const ordersData = await ordersResponse.json();
     

@@ -3,6 +3,7 @@ import { validateTradingViewAlert, validateWebhookSecret } from '@/lib/validatio
 import { logAlert, logError } from '@/lib/fileLogger';
 import { placeDhanOrder } from '@/lib/dhanApi';
 import { storePlacedOrder } from '@/lib/orderTracker';
+import { calculatePositionSize } from '@/lib/fundManager';
 import { ApiResponse } from '@/types/alert';
 
 // Rate limiting store (in production, use Redis or similar)
@@ -98,23 +99,41 @@ export async function POST(request: NextRequest) {
     // Auto-place order if enabled and signal is BUY
     let orderResult = null;
     const autoPlaceOrder = process.env.AUTO_PLACE_ORDER === 'true';
-    const defaultQuantity = parseInt(process.env.DEFAULT_ORDER_QUANTITY || '1');
     
     if (autoPlaceOrder && validation.alert!.signal === 'BUY') {
       try {
         console.log('Auto-placing order for BUY signal:', validation.alert!.ticker);
         
-        const dhanResponse = await placeDhanOrder(validation.alert!, {
-          quantity: defaultQuantity,
-          exchangeSegment: process.env.DHAN_EXCHANGE_SEGMENT || 'NSE_EQ',
-          productType: process.env.DHAN_PRODUCT_TYPE || 'CNC',
-          orderType: process.env.DHAN_ORDER_TYPE || 'LIMIT'
-        });
+        // Calculate position size using fund management
+        const positionCalculation = calculatePositionSize(validation.alert!.price);
         
-        const placedOrder = storePlacedOrder(validation.alert!, alertId, defaultQuantity, dhanResponse);
-        orderResult = { order: placedOrder, dhanResponse };
-        
-        console.log('Order placed successfully:', placedOrder.id);
+        if (!positionCalculation.canPlaceOrder) {
+          console.log('Cannot place order:', positionCalculation.reason);
+          await logError('Order placement blocked', new Error(positionCalculation.reason || 'Unknown reason'));
+        } else {
+          const dhanResponse = await placeDhanOrder(validation.alert!, {
+            useAutoPositionSizing: true,
+            exchangeSegment: process.env.DHAN_EXCHANGE_SEGMENT || 'NSE_EQ',
+            productType: process.env.DHAN_PRODUCT_TYPE || 'CNC',
+            orderType: process.env.DHAN_ORDER_TYPE || 'LIMIT'
+          });
+          
+          const placedOrder = storePlacedOrder(
+            validation.alert!, 
+            alertId, 
+            positionCalculation.calculatedQuantity, 
+            dhanResponse,
+            positionCalculation
+          );
+          orderResult = { order: placedOrder, dhanResponse, positionCalculation };
+          
+          console.log('Order placed successfully:', {
+            orderId: placedOrder.id,
+            quantity: positionCalculation.calculatedQuantity,
+            orderValue: positionCalculation.orderValue,
+            positionSize: positionCalculation.positionSizePercentage.toFixed(2) + '%'
+          });
+        }
       } catch (orderError) {
         console.error('Failed to auto-place order:', orderError);
         await logError('Failed to auto-place order', orderError);

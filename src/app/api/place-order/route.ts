@@ -1,42 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { placeDhanOrder } from '@/lib/dhanApi';
 import { storePlacedOrder } from '@/lib/orderTracker';
+import { calculatePositionSize } from '@/lib/fundManager';
 import { logError } from '@/lib/fileLogger';
 import { ApiResponse } from '@/types/alert';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { alert, quantity, orderConfig } = body;
+    const { alert, quantity, orderConfig, useAutoPositionSizing = true } = body;
 
     // Validate required fields
-    if (!alert || !quantity) {
+    if (!alert) {
       return NextResponse.json(
-        { success: false, error: 'Alert and quantity are required' } as ApiResponse<null>,
+        { success: false, error: 'Alert is required' } as ApiResponse<null>,
         { status: 400 }
       );
     }
 
-    // Validate quantity
-    if (typeof quantity !== 'number' || quantity <= 0) {
-      return NextResponse.json(
-        { success: false, error: 'Quantity must be a positive number' } as ApiResponse<null>,
-        { status: 400 }
-      );
+    // Calculate position size
+    let finalQuantity: number;
+    let positionCalculation;
+    
+    if (useAutoPositionSizing) {
+      positionCalculation = calculatePositionSize(alert.price);
+      
+      if (!positionCalculation.canPlaceOrder) {
+        return NextResponse.json(
+          { success: false, error: `Cannot place order: ${positionCalculation.reason}` } as ApiResponse<null>,
+          { status: 400 }
+        );
+      }
+      
+      finalQuantity = positionCalculation.calculatedQuantity;
+    } else {
+      // Manual quantity
+      if (!quantity || typeof quantity !== 'number' || quantity <= 0) {
+        return NextResponse.json(
+          { success: false, error: 'Quantity must be a positive number when auto position sizing is disabled' } as ApiResponse<null>,
+          { status: 400 }
+        );
+      }
+      finalQuantity = quantity;
     }
 
     // Place order on Dhan.co
     const dhanResponse = await placeDhanOrder(alert, {
-      quantity,
+      quantity: useAutoPositionSizing ? undefined : finalQuantity,
+      useAutoPositionSizing,
       exchangeSegment: orderConfig?.exchangeSegment || 'NSE_EQ',
-      productType: orderConfig?.productType || 'CNC',
-      orderType: orderConfig?.orderType || 'LIMIT',
+      productType: orderConfig?.productType || 'INTRADAY',
+      orderType: orderConfig?.orderType || 'MARKET',
       targetPrice: orderConfig?.targetPrice,
       stopLossPrice: orderConfig?.stopLossPrice
     });
 
     // Store the order
-    const placedOrder = storePlacedOrder(alert, alert.id || 'unknown', quantity, dhanResponse);
+    const placedOrder = storePlacedOrder(alert, alert.id || 'unknown', finalQuantity, dhanResponse, positionCalculation);
 
     return NextResponse.json(
       { 
