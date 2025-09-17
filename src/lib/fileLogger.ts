@@ -71,7 +71,7 @@ export async function logError(message: string, error?: unknown): Promise<void> 
     // Handle objects safely to avoid circular references
     try {
       errorInfo = JSON.stringify(error, null, 2);
-    } catch (jsonError) {
+    } catch {
       errorInfo = `[Object that could not be serialized: ${Object.prototype.toString.call(error)}]`;
     }
   } else {

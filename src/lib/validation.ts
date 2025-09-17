@@ -23,7 +23,20 @@ export function validateTradingViewAlert(payload: unknown): { isValid: boolean; 
       return { isValid: false, error: 'Ticker must be a non-empty string' };
     }
 
-    if (typeof payloadObj.price !== 'number' || payloadObj.price <= 0) {
+    // Handle price as string or number
+    let price: number;
+    if (typeof payloadObj.price === 'string') {
+      price = parseFloat(payloadObj.price);
+      if (isNaN(price)) {
+        return { isValid: false, error: 'Price must be a valid number' };
+      }
+    } else if (typeof payloadObj.price === 'number') {
+      price = payloadObj.price;
+    } else {
+      return { isValid: false, error: 'Price must be a number' };
+    }
+    
+    if (price <= 0) {
       return { isValid: false, error: 'Price must be a positive number' };
     }
 
@@ -49,7 +62,7 @@ export function validateTradingViewAlert(payload: unknown): { isValid: boolean; 
     // Create validated alert object
     const alert: TradingViewAlert = {
       ticker: (payloadObj.ticker as string).trim().toUpperCase(),
-      price: Number(payloadObj.price),
+      price: price, // Use the parsed price
       signal: payloadObj.signal as 'BUY' | 'SELL' | 'HOLD',
       strategy: (payloadObj.strategy as string).trim(),
       timestamp: timestamp.toISOString(),
