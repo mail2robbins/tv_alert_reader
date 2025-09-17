@@ -6,6 +6,8 @@ export interface FundConfig {
   maxPositionSize: number;       // Maximum percentage of funds per position (e.g., 0.1 = 10%)
   minOrderValue: number;         // Minimum order value to place
   maxOrderValue: number;         // Maximum order value per order
+  stopLossPercentage: number;    // Stop loss percentage (e.g., 0.01 = 1%)
+  targetPricePercentage: number; // Target price percentage (e.g., 0.015 = 1.5%)
 }
 
 export interface PositionCalculation {
@@ -19,6 +21,8 @@ export interface PositionCalculation {
   positionSizePercentage: number;
   canPlaceOrder: boolean;
   reason?: string;
+  stopLossPrice?: number;
+  targetPrice?: number;
 }
 
 // Default fund configuration
@@ -27,7 +31,9 @@ const DEFAULT_FUND_CONFIG: FundConfig = {
   leverage: parseFloat(process.env.LEVERAGE || '2'),
   maxPositionSize: parseFloat(process.env.MAX_POSITION_SIZE || '0.1'), // 10% max per position
   minOrderValue: parseFloat(process.env.MIN_ORDER_VALUE || '1000'),    // Minimum ₹1000 order
-  maxOrderValue: parseFloat(process.env.MAX_ORDER_VALUE || '5000')     // Maximum ₹5000 per order
+  maxOrderValue: parseFloat(process.env.MAX_ORDER_VALUE || '5000'),    // Maximum ₹5000 per order
+  stopLossPercentage: parseFloat(process.env.STOP_LOSS_PERCENTAGE || '0.01'),    // 1% stop loss
+  targetPricePercentage: parseFloat(process.env.TARGET_PRICE_PERCENTAGE || '0.015') // 1.5% target
 };
 
 // Get current fund configuration
@@ -66,6 +72,10 @@ export function calculatePositionSize(
   // Calculate position size as percentage of available funds
   const positionSizePercentage = (leveragedValue / config.availableFunds) * 100;
   
+  // Calculate stop loss and target prices
+  const stopLossPrice = stockPrice * (1 - config.stopLossPercentage);
+  const targetPrice = stockPrice * (1 + config.targetPricePercentage);
+  
   // Determine if order can be placed
   let canPlaceOrder = true;
   let reason: string | undefined;
@@ -93,7 +103,9 @@ export function calculatePositionSize(
       leveragedValue: adjustedLeveragedValue,
       positionSizePercentage: adjustedPositionSizePercentage,
       canPlaceOrder: true,
-      reason: `Adjusted to max order value (₹${config.maxOrderValue})`
+      reason: `Adjusted to max order value (₹${config.maxOrderValue})`,
+      stopLossPrice,
+      targetPrice
     };
   } else if (positionSizePercentage > (config.maxPositionSize * 100)) {
     canPlaceOrder = false;
@@ -110,7 +122,9 @@ export function calculatePositionSize(
     leveragedValue,
     positionSizePercentage,
     canPlaceOrder,
-    reason
+    reason,
+    stopLossPrice,
+    targetPrice
   };
 }
 
@@ -185,6 +199,14 @@ export function validateFundConfig(config: FundConfig): {
   
   if (config.maxOrderValue <= config.minOrderValue) {
     errors.push('Maximum order value must be greater than minimum order value');
+  }
+  
+  if (config.stopLossPercentage <= 0 || config.stopLossPercentage > 0.5) {
+    errors.push('Stop loss percentage must be between 0% and 50%');
+  }
+  
+  if (config.targetPricePercentage <= 0 || config.targetPricePercentage > 1) {
+    errors.push('Target price percentage must be between 0% and 100%');
   }
   
   return {

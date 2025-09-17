@@ -152,9 +152,10 @@ async function testDhanIntegration() {
 
     console.log('\n🎉 Dhan.co Integration Test Complete!');
     console.log('\nNext Steps:');
-    console.log('1. Check your Dhan.co account for placed orders');
-    console.log('2. Verify the orders appear in the UI');
-    console.log('3. Check the console logs for detailed information');
+    console.log('1. Check your Dhan.co account for placed orders with stop loss and target prices');
+    console.log('2. Verify the orders appear in the UI with stop loss and target price columns');
+    console.log('3. Check the console logs for detailed information including calculated prices');
+    console.log('4. Test the Fund Manager UI to adjust stop loss and target price percentages');
 
   } catch (error) {
     console.log('\n❌ Test Failed');

@@ -20,6 +20,8 @@ export interface PlacedOrder {
   orderValue: number;
   leveragedValue: number;
   positionSizePercentage: number;
+  stopLossPrice?: number;
+  targetPrice?: number;
 }
 
 // In-memory order storage for serverless environments
@@ -41,6 +43,8 @@ export function storePlacedOrder(
   const orderValue = alert.price * quantity;
   const leveragedValue = positionCalculation?.leveragedValue || (orderValue / 2); // Default to 2x leverage
   const positionSizePercentage = positionCalculation?.positionSizePercentage || 0;
+  const stopLossPrice = positionCalculation?.stopLossPrice;
+  const targetPrice = positionCalculation?.targetPrice;
   
   const order: PlacedOrder = {
     id: generateOrderId(),
@@ -58,7 +62,9 @@ export function storePlacedOrder(
     positionCalculation,
     orderValue,
     leveragedValue,
-    positionSizePercentage
+    positionSizePercentage,
+    stopLossPrice,
+    targetPrice
   };
 
   memoryOrders.push(order);

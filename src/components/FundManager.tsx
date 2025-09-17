@@ -166,6 +166,50 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
               </div>
             )}
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Stop Loss %
+            </label>
+            {isEditing ? (
+              <input
+                type="number"
+                step="0.001"
+                min="0.001"
+                max="0.5"
+                value={config.stopLossPercentage}
+                onChange={(e) => setConfig({ ...config, stopLossPercentage: parseFloat(e.target.value) || 0.01 })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="0.01"
+              />
+            ) : (
+              <div className="text-2xl font-semibold text-gray-900">
+                {formatPercentage(config.stopLossPercentage * 100)}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Target Price %
+            </label>
+            {isEditing ? (
+              <input
+                type="number"
+                step="0.001"
+                min="0.001"
+                max="1"
+                value={config.targetPricePercentage}
+                onChange={(e) => setConfig({ ...config, targetPricePercentage: parseFloat(e.target.value) || 0.015 })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="0.015"
+              />
+            ) : (
+              <div className="text-2xl font-semibold text-gray-900">
+                {formatPercentage(config.targetPricePercentage * 100)}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Fund Utilization Summary */}
@@ -210,7 +254,7 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
 
           {positionCalculation && (
             <div className="bg-blue-50 rounded-lg p-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-sm">
                 <div>
                   <div className="text-gray-500">Calculated Quantity</div>
                   <div className="font-semibold text-lg">{positionCalculation.calculatedQuantity}</div>
@@ -227,11 +271,19 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
                   <div className="text-gray-500">Position Size</div>
                   <div className="font-semibold text-lg">{formatPercentage(positionCalculation.positionSizePercentage)}</div>
                 </div>
+                <div>
+                  <div className="text-gray-500">Stop Loss</div>
+                  <div className="font-semibold text-lg text-red-600">{formatCurrency(positionCalculation.stopLossPrice || 0)}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Target Price</div>
+                  <div className="font-semibold text-lg text-green-600">{formatCurrency(positionCalculation.targetPrice || 0)}</div>
+                </div>
               </div>
               
               {positionCalculation.canPlaceOrder ? (
                 <div className="mt-3 text-sm text-green-600 font-medium">
-                  ✅ Order can be placed
+                  ✅ Order can be placed with stop loss and target price
                 </div>
               ) : (
                 <div className="mt-3 text-sm text-red-600 font-medium">

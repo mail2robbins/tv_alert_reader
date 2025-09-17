@@ -127,7 +127,9 @@ export async function placeDhanOrder(
       calculatedQuantity: quantity,
       orderValue: positionCalculation.orderValue,
       leveragedValue: positionCalculation.leveragedValue,
-      positionSizePercentage: positionCalculation.positionSizePercentage.toFixed(2) + '%'
+      positionSizePercentage: positionCalculation.positionSizePercentage.toFixed(2) + '%',
+      stopLossPrice: positionCalculation.stopLossPrice,
+      targetPrice: positionCalculation.targetPrice
     });
   } else {
     // Use manual quantity
@@ -146,8 +148,8 @@ export async function placeDhanOrder(
     securityId: mapTickerToSecurityId(alert.ticker),
     quantity: quantity,
     price: alert.price,
-    targetPrice: orderConfig?.targetPrice,
-    stopLossPrice: orderConfig?.stopLossPrice
+    targetPrice: orderConfig?.targetPrice || (positionCalculation?.targetPrice),
+    stopLossPrice: orderConfig?.stopLossPrice || (positionCalculation?.stopLossPrice)
   };
 
   try {

@@ -114,8 +114,8 @@ export async function POST(request: NextRequest) {
           const dhanResponse = await placeDhanOrder(validation.alert!, {
             useAutoPositionSizing: true,
             exchangeSegment: process.env.DHAN_EXCHANGE_SEGMENT || 'NSE_EQ',
-            productType: process.env.DHAN_PRODUCT_TYPE || 'CNC',
-            orderType: process.env.DHAN_ORDER_TYPE || 'LIMIT'
+            productType: process.env.DHAN_PRODUCT_TYPE || 'INTRADAY',
+            orderType: process.env.DHAN_ORDER_TYPE || 'MARKET'
           });
           
           const placedOrder = storePlacedOrder(

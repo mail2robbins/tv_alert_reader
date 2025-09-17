@@ -104,6 +104,12 @@ export default function OrdersTable({ orders, isLoading }: OrdersTableProps) {
                 Position Size
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Stop Loss
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Target Price
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -141,6 +147,12 @@ export default function OrdersTable({ orders, isLoading }: OrdersTableProps) {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {order.positionSizePercentage.toFixed(2)}%
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">
+                  {order.stopLossPrice ? `₹${order.stopLossPrice.toFixed(2)}` : '-'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">
+                  {order.targetPrice ? `₹${order.targetPrice.toFixed(2)}` : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
