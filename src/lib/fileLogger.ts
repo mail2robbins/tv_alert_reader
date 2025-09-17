@@ -1,8 +1,12 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { AlertLogEntry, TradingViewAlert } from '@/types/alert';
+import { storeAlertInMemory, readAlertsFromMemory, getAlertStatsFromMemory } from './memoryStorage';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+// Check if we're in a serverless environment
+const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY;
+
+const DATA_DIR = isServerless ? '/tmp' : path.join(process.cwd(), 'data');
 const ALERTS_LOG_FILE = path.join(DATA_DIR, 'alerts.log');
 const ERROR_LOG_FILE = path.join(DATA_DIR, 'errors.log');
 
@@ -27,8 +31,11 @@ function formatTimestamp(): string {
 
 // Log an alert to the file
 export async function logAlert(alert: TradingViewAlert): Promise<string> {
-  await ensureDataDirectory();
-  
+  // In serverless environments, use memory storage
+  if (isServerless) {
+    return storeAlertInMemory(alert);
+  }
+
   const alertEntry: AlertLogEntry = {
     id: generateAlertId(),
     timestamp: formatTimestamp(),
@@ -37,7 +44,12 @@ export async function logAlert(alert: TradingViewAlert): Promise<string> {
 
   const logLine = `[${alertEntry.timestamp}] ${JSON.stringify(alertEntry)}\n`;
   
+  // Always log to console for debugging
+  console.log('Alert received:', alertEntry);
+  
+  // Try to write to file
   try {
+    await ensureDataDirectory();
     await fs.appendFile(ALERTS_LOG_FILE, logLine, 'utf8');
     return alertEntry.id;
   } catch (error) {
@@ -48,8 +60,6 @@ export async function logAlert(alert: TradingViewAlert): Promise<string> {
 
 // Log an error to the error file
 export async function logError(message: string, error?: unknown): Promise<void> {
-  await ensureDataDirectory();
-  
   const errorEntry = {
     timestamp: formatTimestamp(),
     message,
@@ -59,10 +69,21 @@ export async function logError(message: string, error?: unknown): Promise<void> 
 
   const logLine = `[${errorEntry.timestamp}] ERROR: ${JSON.stringify(errorEntry)}\n`;
   
+  // Always log to console for serverless environments
+  console.error(logLine);
+  
+  // Try to write to file if possible
   try {
+    await ensureDataDirectory();
     await fs.appendFile(ERROR_LOG_FILE, logLine, 'utf8');
   } catch (writeError) {
-    console.error('Failed to write error log:', writeError);
+    // In serverless environments, file writing might fail
+    // This is expected and we just log to console instead
+    if (isServerless) {
+      console.warn('File logging not available in serverless environment, using console logging only');
+    } else {
+      console.error('Failed to write error log:', writeError);
+    }
   }
 }
 
@@ -74,6 +95,11 @@ export async function readAlerts(filters?: {
   signal?: string;
   strategy?: string;
 }): Promise<AlertLogEntry[]> {
+  // In serverless environments, use memory storage
+  if (isServerless) {
+    return readAlertsFromMemory(filters);
+  }
+
   try {
     await fs.access(ALERTS_LOG_FILE);
   } catch {
@@ -108,15 +134,32 @@ export async function readAlerts(filters?: {
         
         alerts.push(alertEntry);
       } catch (parseError) {
-        await logError('Failed to parse alert log line', { line, parseError });
+        // In serverless environments, don't try to log errors to file
+        if (isServerless) {
+          console.error('Failed to parse alert log line:', { line, parseError });
+        } else {
+          await logError('Failed to parse alert log line', { line, parseError });
+        }
       }
     }
     
     // Sort by timestamp (newest first)
     return alerts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   } catch (error) {
-    await logError('Failed to read alerts', error);
-    throw new Error('Failed to read alerts');
+    // Handle read-only file system errors gracefully
+    if (error instanceof Error && (error.message.includes('EROFS') || error.message.includes('read-only'))) {
+      console.warn('File system is read-only, falling back to memory storage');
+      return readAlertsFromMemory(filters);
+    }
+    
+    // In serverless environments, don't try to log errors to file
+    if (isServerless) {
+      console.error('Failed to read alerts:', error);
+      return []; // Return empty array instead of throwing
+    } else {
+      await logError('Failed to read alerts', error);
+      throw new Error('Failed to read alerts');
+    }
   }
 }
 
@@ -128,18 +171,39 @@ export async function getAlertStats(): Promise<{
   uniqueTickers: number;
   strategies: string[];
 }> {
-  const alerts = await readAlerts();
-  
-  const buySignals = alerts.filter(a => a.data.signal === 'BUY').length;
-  const sellSignals = alerts.filter(a => a.data.signal === 'SELL').length;
-  const uniqueTickers = new Set(alerts.map(a => a.data.ticker)).size;
-  const strategies = [...new Set(alerts.map(a => a.data.strategy))];
-  
-  return {
-    totalAlerts: alerts.length,
-    buySignals,
-    sellSignals,
-    uniqueTickers,
-    strategies
-  };
+  // In serverless environments, use memory storage
+  if (isServerless) {
+    return getAlertStatsFromMemory();
+  }
+
+  try {
+    const alerts = await readAlerts();
+    
+    const buySignals = alerts.filter(a => a.data.signal === 'BUY').length;
+    const sellSignals = alerts.filter(a => a.data.signal === 'SELL').length;
+    const uniqueTickers = new Set(alerts.map(a => a.data.ticker)).size;
+    const strategies = [...new Set(alerts.map(a => a.data.strategy))];
+    
+    return {
+      totalAlerts: alerts.length,
+      buySignals,
+      sellSignals,
+      uniqueTickers,
+      strategies
+    };
+  } catch (error) {
+    // Handle read-only file system errors gracefully
+    if (error instanceof Error && (error.message.includes('EROFS') || error.message.includes('read-only'))) {
+      console.warn('File system is read-only, falling back to memory storage for stats');
+      return getAlertStatsFromMemory();
+    }
+    
+    // In serverless environments, fall back to memory storage
+    if (isServerless) {
+      console.warn('Failed to read alerts for stats, falling back to memory storage');
+      return getAlertStatsFromMemory();
+    }
+    
+    throw error;
+  }
 }
