@@ -18,7 +18,7 @@ interface Stats {
 export default function Home() {
   const [alerts, setAlerts] = useState<AlertLogEntry[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [filters, setFilters] = useState<{
@@ -26,11 +26,23 @@ export default function Home() {
     signal?: string;
     strategy?: string;
   }>({});
+  const [filterInputs, setFilterInputs] = useState<{
+    ticker: string;
+    signal: string;
+    strategy: string;
+  }>({
+    ticker: '',
+    signal: '',
+    strategy: ''
+  });
 
-  const fetchAlerts = useCallback(async () => {
-    // Prevent multiple simultaneous calls
-    if (isLoading) return;
-    
+
+  const handleDateChange = useCallback((newStartDate: Date | null, newEndDate: Date | null) => {
+    setStartDate(newStartDate);
+    setEndDate(newEndDate);
+  }, []);
+
+  const fetchData = useCallback(async (filtersToUse: any) => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
@@ -41,14 +53,14 @@ export default function Home() {
       if (endDate) {
         params.append('endDate', endDate.toISOString().split('T')[0]);
       }
-      if (filters.ticker) {
-        params.append('ticker', filters.ticker);
+      if (filtersToUse.ticker) {
+        params.append('ticker', filtersToUse.ticker);
       }
-      if (filters.signal) {
-        params.append('signal', filters.signal);
+      if (filtersToUse.signal) {
+        params.append('signal', filtersToUse.signal);
       }
-      if (filters.strategy) {
-        params.append('strategy', filters.strategy);
+      if (filtersToUse.strategy) {
+        params.append('strategy', filtersToUse.strategy);
       }
       params.append('includeStats', 'true');
 
@@ -66,24 +78,32 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
-  }, [startDate, endDate, filters.ticker, filters.signal, filters.strategy, isLoading]);
+  }, [startDate, endDate]);
 
-  // Initial load and when filters change
-  useEffect(() => {
-    fetchAlerts();
-  }, [fetchAlerts]);
-
-  const handleDateChange = useCallback((newStartDate: Date | null, newEndDate: Date | null) => {
-    setStartDate(newStartDate);
-    setEndDate(newEndDate);
-  }, []);
-
-  const handleFiltersChange = useCallback((newFilters: {
-    ticker?: string;
-    signal?: string;
-    strategy?: string;
-  }) => {
+  const handleLoadData = useCallback(() => {
+    // Apply the current filter inputs to the actual filters
+    const newFilters = {
+      ticker: filterInputs.ticker || undefined,
+      signal: filterInputs.signal || undefined,
+      strategy: filterInputs.strategy || undefined,
+    };
     setFilters(newFilters);
+    fetchData(newFilters);
+  }, [filterInputs, fetchData]);
+
+  const handleLoadAllData = useCallback(() => {
+    // Load all data without any filters
+    setFilters({});
+    setFilterInputs({ ticker: '', signal: '', strategy: '' });
+    fetchData({});
+  }, [fetchData]);
+
+  const handleFilterInputChange = useCallback((newInputs: {
+    ticker: string;
+    signal: string;
+    strategy: string;
+  }) => {
+    setFilterInputs(newInputs);
   }, []);
 
   return (
@@ -99,7 +119,7 @@ export default function Home() {
               </p>
             </div>
             <button
-              onClick={fetchAlerts}
+              onClick={handleLoadData}
               disabled={isLoading}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
@@ -173,12 +193,16 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <DateFilter
             onDateChange={handleDateChange}
+            onLoadAllData={handleLoadAllData}
+            isLoading={isLoading}
             startDate={startDate}
             endDate={endDate}
           />
           <AlertFilters
-            onFiltersChange={handleFiltersChange}
+            onLoadData={handleLoadData}
+            isLoading={isLoading}
             availableStrategies={stats?.strategies || []}
+            onFilterInputChange={handleFilterInputChange}
           />
         </div>
 

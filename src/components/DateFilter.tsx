@@ -6,11 +6,13 @@ import 'react-datepicker/dist/react-datepicker.css';
 
 interface DateFilterProps {
   onDateChange: (startDate: Date | null, endDate: Date | null) => void;
+  onLoadAllData?: () => void;
+  isLoading?: boolean;
   startDate?: Date | null;
   endDate?: Date | null;
 }
 
-export default function DateFilter({ onDateChange, startDate, endDate }: DateFilterProps) {
+export default function DateFilter({ onDateChange, onLoadAllData, isLoading, startDate, endDate }: DateFilterProps) {
   const [localStartDate, setLocalStartDate] = useState<Date | null>(startDate || null);
   const [localEndDate, setLocalEndDate] = useState<Date | null>(endDate || null);
 
@@ -87,7 +89,7 @@ export default function DateFilter({ onDateChange, startDate, endDate }: DateFil
             selectsEnd
             startDate={localStartDate}
             endDate={localEndDate}
-            minDate={localStartDate}
+            minDate={localStartDate || undefined}
             maxDate={new Date()}
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholderText="Select end date"
@@ -121,6 +123,15 @@ export default function DateFilter({ onDateChange, startDate, endDate }: DateFil
         >
           Clear
         </button>
+        {onLoadAllData && (
+          <button
+            onClick={onLoadAllData}
+            disabled={isLoading}
+            className="px-3 py-1 text-sm bg-green-100 text-green-800 rounded-md hover:bg-green-200 transition-colors disabled:opacity-50"
+          >
+            Load All Data
+          </button>
+        )}
       </div>
     </div>
   );
