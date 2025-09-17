@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getAlertStats } from '@/lib/fileLogger';
 import { ApiResponse } from '@/types/alert';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const stats = await getAlertStats();
     

@@ -47,14 +47,14 @@ export async function logAlert(alert: TradingViewAlert): Promise<string> {
 }
 
 // Log an error to the error file
-export async function logError(message: string, error?: any): Promise<void> {
+export async function logError(message: string, error?: unknown): Promise<void> {
   await ensureDataDirectory();
   
   const errorEntry = {
     timestamp: formatTimestamp(),
     message,
-    error: error?.message || error,
-    stack: error?.stack
+    error: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined
   };
 
   const logLine = `[${errorEntry.timestamp}] ERROR: ${JSON.stringify(errorEntry)}\n`;
@@ -92,7 +92,7 @@ export async function readAlerts(filters?: {
         const match = line.match(/^\[([^\]]+)\] (.+)$/);
         if (!match) continue;
         
-        const [, timestamp, jsonStr] = match;
+        const [, , jsonStr] = match;
         const alertEntry: AlertLogEntry = JSON.parse(jsonStr);
         
         // Apply filters

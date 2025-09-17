@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readAlerts, getAlertStats } from '@/lib/fileLogger';
 import { validateDateRange } from '@/lib/validation';
-import { ApiResponse, AlertFilters } from '@/types/alert';
+import { ApiResponse, AlertFilters, AlertLogEntry } from '@/types/alert';
 
 export async function GET(request: NextRequest) {
   try {
@@ -58,7 +58,22 @@ export async function GET(request: NextRequest) {
     const paginatedAlerts = allAlerts.slice(offset, offset + limit);
 
     // Prepare response data
-    const responseData: any = {
+    const responseData: {
+      alerts: AlertLogEntry[];
+      pagination: {
+        total: number;
+        limit: number;
+        offset: number;
+        hasMore: boolean;
+      };
+      stats?: {
+        totalAlerts: number;
+        buySignals: number;
+        sellSignals: number;
+        uniqueTickers: number;
+        strategies: string[];
+      };
+    } = {
       alerts: paginatedAlerts,
       pagination: {
         total: totalCount,

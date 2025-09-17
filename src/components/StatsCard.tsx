@@ -9,13 +9,6 @@ interface StatsCardProps {
 }
 
 export default function StatsCard({ title, value, subtitle, icon, color = 'blue' }: StatsCardProps) {
-  const colorClasses = {
-    blue: 'bg-blue-500',
-    green: 'bg-green-500',
-    red: 'bg-red-500',
-    yellow: 'bg-yellow-500',
-    gray: 'bg-gray-500'
-  };
 
   const iconColorClasses = {
     blue: 'text-blue-600',

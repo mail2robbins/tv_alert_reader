@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { AlertLogEntry } from '@/types/alert';
 import AlertTable from '@/components/AlertTable';
 import DateFilter from '@/components/DateFilter';
@@ -21,11 +21,6 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
-  const [filters, setFilters] = useState<{
-    ticker?: string;
-    signal?: string;
-    strategy?: string;
-  }>({});
   const [filterInputs, setFilterInputs] = useState<{
     ticker: string;
     signal: string;
@@ -50,7 +45,6 @@ export default function Home() {
       signal: filterInputs.signal || undefined,
       strategy: filterInputs.strategy || undefined,
     };
-    setFilters(newFilters);
     
     // Fetch data with filters
     setIsLoading(true);
@@ -96,7 +90,6 @@ export default function Home() {
 
   const handleLoadAllData = useCallback(() => {
     // Load all data without any filters
-    setFilters({});
     setFilterInputs({ ticker: '', signal: '', strategy: '' });
     
     // Fetch data directly without filters

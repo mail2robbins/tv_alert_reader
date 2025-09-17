@@ -1,62 +1,64 @@
 import { TradingViewAlert } from '@/types/alert';
 
 // Validate TradingView alert payload
-export function validateTradingViewAlert(payload: any): { isValid: boolean; error?: string; alert?: TradingViewAlert } {
+export function validateTradingViewAlert(payload: unknown): { isValid: boolean; error?: string; alert?: TradingViewAlert } {
   try {
     // Check if payload is an object
     if (!payload || typeof payload !== 'object') {
       return { isValid: false, error: 'Payload must be a valid JSON object' };
     }
 
+    const payloadObj = payload as Record<string, unknown>;
+
     // Required fields validation
     const requiredFields = ['ticker', 'price', 'signal', 'strategy', 'timestamp'];
     for (const field of requiredFields) {
-      if (!(field in payload)) {
+      if (!(field in payloadObj)) {
         return { isValid: false, error: `Missing required field: ${field}` };
       }
     }
 
     // Type validation
-    if (typeof payload.ticker !== 'string' || payload.ticker.trim() === '') {
+    if (typeof payloadObj.ticker !== 'string' || payloadObj.ticker.trim() === '') {
       return { isValid: false, error: 'Ticker must be a non-empty string' };
     }
 
-    if (typeof payload.price !== 'number' || payload.price <= 0) {
+    if (typeof payloadObj.price !== 'number' || payloadObj.price <= 0) {
       return { isValid: false, error: 'Price must be a positive number' };
     }
 
-    if (!['BUY', 'SELL', 'HOLD'].includes(payload.signal)) {
+    if (!['BUY', 'SELL', 'HOLD'].includes(payloadObj.signal as string)) {
       return { isValid: false, error: 'Signal must be BUY, SELL, or HOLD' };
     }
 
-    if (typeof payload.strategy !== 'string' || payload.strategy.trim() === '') {
+    if (typeof payloadObj.strategy !== 'string' || payloadObj.strategy.trim() === '') {
       return { isValid: false, error: 'Strategy must be a non-empty string' };
     }
 
     // Timestamp validation
-    const timestamp = new Date(payload.timestamp);
+    const timestamp = new Date(payloadObj.timestamp as string);
     if (isNaN(timestamp.getTime())) {
       return { isValid: false, error: 'Invalid timestamp format' };
     }
 
     // Optional custom_note validation
-    if (payload.custom_note !== undefined && typeof payload.custom_note !== 'string') {
+    if (payloadObj.custom_note !== undefined && typeof payloadObj.custom_note !== 'string') {
       return { isValid: false, error: 'Custom note must be a string if provided' };
     }
 
     // Create validated alert object
     const alert: TradingViewAlert = {
-      ticker: payload.ticker.trim().toUpperCase(),
-      price: Number(payload.price),
-      signal: payload.signal,
-      strategy: payload.strategy.trim(),
+      ticker: (payloadObj.ticker as string).trim().toUpperCase(),
+      price: Number(payloadObj.price),
+      signal: payloadObj.signal as 'BUY' | 'SELL' | 'HOLD',
+      strategy: (payloadObj.strategy as string).trim(),
       timestamp: timestamp.toISOString(),
-      custom_note: payload.custom_note?.trim() || undefined,
-      webhook_secret: payload.webhook_secret
+      custom_note: (payloadObj.custom_note as string)?.trim() || undefined,
+      webhook_secret: payloadObj.webhook_secret as string
     };
 
     return { isValid: true, alert };
-  } catch (error) {
+  } catch {
     return { isValid: false, error: 'Invalid payload format' };
   }
 }
