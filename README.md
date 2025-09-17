@@ -9,6 +9,8 @@ A Next.js application that receives TradingView alerts via webhook and provides 
 - 📅 **Date Filtering**: Filter alerts by date range with quick presets
 - 🔍 **Advanced Filters**: Filter by ticker, signal type, and strategy
 - 📝 **File Logging**: Persistent storage of alerts in log files
+- 🏦 **Dhan.co Integration**: Automatically place buy orders when TradingView alerts are received
+- 📈 **Order Tracking**: View placed orders, their status, and trading statistics
 - 🔒 **Security**: Webhook authentication and rate limiting
 - 📱 **Responsive Design**: Works on desktop and mobile devices
 
@@ -43,6 +45,17 @@ ERROR_LOG_FILE=./data/errors.log
 # Rate Limiting Configuration (optional)
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=100
+
+# Dhan.co API Configuration (optional)
+DHAN_ACCESS_TOKEN=your_dhan_access_token_here
+DHAN_CLIENT_ID=your_dhan_client_id_here
+
+# Auto Order Placement (optional)
+AUTO_PLACE_ORDER=false
+DEFAULT_ORDER_QUANTITY=1
+DHAN_EXCHANGE_SEGMENT=NSE_EQ
+DHAN_PRODUCT_TYPE=CNC
+DHAN_ORDER_TYPE=LIMIT
 ```
 
 ### 3. Run the Application
@@ -59,6 +72,21 @@ npm start
 The application will be available at `http://localhost:3000`.
 
 ## TradingView Alert Configuration
+
+See [TRADINGVIEW_SETUP.md](./TRADINGVIEW_SETUP.md) for detailed instructions on configuring TradingView alerts.
+
+## Dhan.co Integration Setup
+
+To enable automatic order placement with Dhan.co:
+
+1. **Get API Credentials**: Obtain your `DHAN_ACCESS_TOKEN` and `DHAN_CLIENT_ID` from your Dhan.co account
+2. **Configure Environment**: Add the credentials to your `.env.local` file
+3. **Enable Auto Orders**: Set `AUTO_PLACE_ORDER=true` to automatically place buy orders
+4. **Test Integration**: Use the test script to verify the setup
+
+For detailed setup instructions, see [DHAN_SETUP.md](./DHAN_SETUP.md).
+
+## TradingView Alert Configuration (Legacy)
 
 ### 1. Create an Alert in TradingView
 

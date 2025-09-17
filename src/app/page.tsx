@@ -6,6 +6,9 @@ import AlertTable from '@/components/AlertTable';
 import DateFilter from '@/components/DateFilter';
 import AlertFilters from '@/components/AlertFilters';
 import StatsCard from '@/components/StatsCard';
+import OrdersTable from '@/components/OrdersTable';
+import OrderStatsCard from '@/components/OrderStatsCard';
+import { PlacedOrder } from '@/lib/orderTracker';
 
 interface Stats {
   totalAlerts: number;
@@ -18,7 +21,18 @@ interface Stats {
 export default function Home() {
   const [alerts, setAlerts] = useState<AlertLogEntry[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [orders, setOrders] = useState<PlacedOrder[]>([]);
+  const [orderStats, setOrderStats] = useState<{
+    totalOrders: number;
+    placedOrders: number;
+    failedOrders: number;
+    pendingOrders: number;
+    totalQuantity: number;
+    totalValue: number;
+    uniqueTickers: number;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [filterInputs, setFilterInputs] = useState<{
@@ -126,6 +140,25 @@ export default function Home() {
     setFilterInputs(newInputs);
   }, []);
 
+  const fetchOrders = useCallback(async () => {
+    setIsLoadingOrders(true);
+    try {
+      const response = await fetch('/api/orders?includeStats=true');
+      const data = await response.json();
+
+      if (data.success) {
+        setOrders(data.data.orders);
+        setOrderStats(data.data.stats);
+      } else {
+        console.error('Failed to fetch orders:', data.error);
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setIsLoadingOrders(false);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -228,6 +261,84 @@ export default function Home() {
 
         {/* Alerts Table */}
         <AlertTable alerts={alerts} isLoading={isLoading} />
+
+        {/* Orders Section */}
+        <div className="mt-8">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Trading Orders</h2>
+            <button
+              onClick={fetchOrders}
+              disabled={isLoadingOrders}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isLoadingOrders ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh Orders
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Order Stats */}
+          {orderStats && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <OrderStatsCard
+                title="Total Orders"
+                value={orderStats.totalOrders}
+                color="blue"
+                icon={
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                }
+              />
+              <OrderStatsCard
+                title="Placed Orders"
+                value={orderStats.placedOrders}
+                color="green"
+                icon={
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                }
+              />
+              <OrderStatsCard
+                title="Failed Orders"
+                value={orderStats.failedOrders}
+                color="red"
+                icon={
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                }
+              />
+              <OrderStatsCard
+                title="Total Value"
+                value={`₹${orderStats.totalValue.toLocaleString()}`}
+                color="yellow"
+                icon={
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                  </svg>
+                }
+              />
+            </div>
+          )}
+
+          {/* Orders Table */}
+          <OrdersTable orders={orders} isLoading={isLoadingOrders} />
+        </div>
 
         {/* Webhook Info */}
         <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">

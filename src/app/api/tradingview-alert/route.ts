@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateTradingViewAlert, validateWebhookSecret } from '@/lib/validation';
 import { logAlert, logError } from '@/lib/fileLogger';
+import { placeDhanOrder } from '@/lib/dhanApi';
+import { storePlacedOrder } from '@/lib/orderTracker';
 import { ApiResponse } from '@/types/alert';
 
 // Rate limiting store (in production, use Redis or similar)
@@ -93,6 +95,33 @@ export async function POST(request: NextRequest) {
     // Log the alert
     const alertId = await logAlert(validation.alert!);
     
+    // Auto-place order if enabled and signal is BUY
+    let orderResult = null;
+    const autoPlaceOrder = process.env.AUTO_PLACE_ORDER === 'true';
+    const defaultQuantity = parseInt(process.env.DEFAULT_ORDER_QUANTITY || '1');
+    
+    if (autoPlaceOrder && validation.alert!.signal === 'BUY') {
+      try {
+        console.log('Auto-placing order for BUY signal:', validation.alert!.ticker);
+        
+        const dhanResponse = await placeDhanOrder(validation.alert!, {
+          quantity: defaultQuantity,
+          exchangeSegment: process.env.DHAN_EXCHANGE_SEGMENT || 'NSE_EQ',
+          productType: process.env.DHAN_PRODUCT_TYPE || 'CNC',
+          orderType: process.env.DHAN_ORDER_TYPE || 'LIMIT'
+        });
+        
+        const placedOrder = storePlacedOrder(validation.alert!, alertId, defaultQuantity, dhanResponse);
+        orderResult = { order: placedOrder, dhanResponse };
+        
+        console.log('Order placed successfully:', placedOrder.id);
+      } catch (orderError) {
+        console.error('Failed to auto-place order:', orderError);
+        await logError('Failed to auto-place order', orderError);
+        // Don't fail the webhook if order placement fails
+      }
+    }
+    
     const processingTime = Date.now() - startTime;
     
     // Log successful processing
@@ -102,8 +131,18 @@ export async function POST(request: NextRequest) {
       { 
         success: true, 
         message: 'Alert received and logged successfully',
-        data: { alertId, processingTime }
-      } as ApiResponse<{ alertId: string; processingTime: number }>,
+        data: { 
+          alertId, 
+          processingTime,
+          orderPlaced: !!orderResult,
+          order: orderResult?.order
+        }
+      } as ApiResponse<{ 
+        alertId: string; 
+        processingTime: number;
+        orderPlaced: boolean;
+        order?: unknown;
+      }>,
       { 
         status: 200,
         headers: { 

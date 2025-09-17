@@ -33,6 +33,8 @@ In the "Message" field, use one of these JSON templates:
 }
 ```
 
+**Note:** The `price` field can be sent as either a number (`{{close}}`) or a string (`"{{close}}"`). The webhook will automatically convert string prices to numbers.
+
 ### Advanced Template with Custom Data
 ```json
 {
@@ -247,7 +249,7 @@ Use Pine Script to create conditional signals:
 {
   "ticker": "{{ticker}}",
   "price": {{close}},
-  "signal": "{{strategy.order.action}}",
+  "signal": "BUY",
   "strategy": "{{strategy.order.comment}}",
   "timestamp": "{{time}}",
   "custom_note": "Condition: {{strategy.order.alert_message}}",
