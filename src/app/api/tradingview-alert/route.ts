@@ -53,7 +53,13 @@ export async function POST(request: NextRequest) {
     try {
       payload = await request.json();
     } catch (error) {
-      await logError('Invalid JSON payload', { error, ip: clientIp });
+      await logError('Invalid JSON payload', error);
+      console.error('JSON parsing failed:', {
+        error: error instanceof Error ? error.message : String(error),
+        ip: clientIp,
+        userAgent: request.headers.get('user-agent'),
+        contentType: request.headers.get('content-type')
+      });
       return NextResponse.json(
         { success: false, error: 'Invalid JSON payload' } as ApiResponse<null>,
         { status: 400 }
@@ -62,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     // Validate webhook secret
     if (!validateWebhookSecret(payload.webhook_secret)) {
-      await logError('Invalid webhook secret', { ip: clientIp });
+      await logError('Invalid webhook secret', new Error(`Invalid secret from IP: ${clientIp}`));
       return NextResponse.json(
         { success: false, error: 'Unauthorized' } as ApiResponse<null>,
         { status: 401 }
@@ -72,10 +78,11 @@ export async function POST(request: NextRequest) {
     // Validate alert payload
     const validation = validateTradingViewAlert(payload);
     if (!validation.isValid) {
-      await logError('Invalid alert payload', { 
-        error: validation.error, 
-        payload, 
-        ip: clientIp 
+      await logError('Invalid alert payload', new Error(validation.error || 'Unknown validation error'));
+      console.error('Alert validation failed:', {
+        error: validation.error,
+        payload: JSON.stringify(payload, null, 2),
+        ip: clientIp
       });
       return NextResponse.json(
         { success: false, error: validation.error } as ApiResponse<null>,
@@ -108,10 +115,12 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    await logError('Unexpected error in webhook', { 
-      error, 
-      ip: clientIp, 
-      processingTime 
+    await logError('Unexpected error in webhook', error);
+    console.error('Unexpected webhook error:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      ip: clientIp,
+      processingTime
     });
     
     return NextResponse.json(

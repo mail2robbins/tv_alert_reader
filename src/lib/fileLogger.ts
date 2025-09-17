@@ -60,11 +60,29 @@ export async function logAlert(alert: TradingViewAlert): Promise<string> {
 
 // Log an error to the error file
 export async function logError(message: string, error?: unknown): Promise<void> {
+  // Safely serialize error information
+  let errorInfo: string;
+  let stackInfo: string | undefined;
+  
+  if (error instanceof Error) {
+    errorInfo = error.message;
+    stackInfo = error.stack;
+  } else if (error && typeof error === 'object') {
+    // Handle objects safely to avoid circular references
+    try {
+      errorInfo = JSON.stringify(error, null, 2);
+    } catch (jsonError) {
+      errorInfo = `[Object that could not be serialized: ${Object.prototype.toString.call(error)}]`;
+    }
+  } else {
+    errorInfo = String(error);
+  }
+
   const errorEntry = {
     timestamp: formatTimestamp(),
     message,
-    error: error instanceof Error ? error.message : String(error),
-    stack: error instanceof Error ? error.stack : undefined
+    error: errorInfo,
+    stack: stackInfo
   };
 
   const logLine = `[${errorEntry.timestamp}] ERROR: ${JSON.stringify(errorEntry)}\n`;
