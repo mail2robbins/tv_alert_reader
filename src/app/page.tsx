@@ -42,43 +42,6 @@ export default function Home() {
     setEndDate(newEndDate);
   }, []);
 
-  const fetchData = useCallback(async (filtersToUse: any) => {
-    setIsLoading(true);
-    try {
-      const params = new URLSearchParams();
-      
-      if (startDate) {
-        params.append('startDate', startDate.toISOString().split('T')[0]);
-      }
-      if (endDate) {
-        params.append('endDate', endDate.toISOString().split('T')[0]);
-      }
-      if (filtersToUse.ticker) {
-        params.append('ticker', filtersToUse.ticker);
-      }
-      if (filtersToUse.signal) {
-        params.append('signal', filtersToUse.signal);
-      }
-      if (filtersToUse.strategy) {
-        params.append('strategy', filtersToUse.strategy);
-      }
-      params.append('includeStats', 'true');
-
-      const response = await fetch(`/api/alerts?${params.toString()}`);
-      const data = await response.json();
-
-      if (data.success) {
-        setAlerts(data.data.alerts);
-        setStats(data.data.stats);
-      } else {
-        console.error('Failed to fetch alerts:', data.error);
-      }
-    } catch (error) {
-      console.error('Error fetching alerts:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [startDate, endDate]);
 
   const handleLoadData = useCallback(() => {
     // Apply the current filter inputs to the actual filters
@@ -88,15 +51,79 @@ export default function Home() {
       strategy: filterInputs.strategy || undefined,
     };
     setFilters(newFilters);
-    fetchData(newFilters);
-  }, [filterInputs, fetchData]);
+    
+    // Fetch data with filters
+    setIsLoading(true);
+    const fetchFilteredData = async () => {
+      try {
+        const params = new URLSearchParams();
+        
+        if (startDate) {
+          params.append('startDate', startDate.toISOString().split('T')[0]);
+        }
+        if (endDate) {
+          params.append('endDate', endDate.toISOString().split('T')[0]);
+        }
+        if (newFilters.ticker) {
+          params.append('ticker', newFilters.ticker);
+        }
+        if (newFilters.signal) {
+          params.append('signal', newFilters.signal);
+        }
+        if (newFilters.strategy) {
+          params.append('strategy', newFilters.strategy);
+        }
+        params.append('includeStats', 'true');
+
+        const response = await fetch(`/api/alerts?${params.toString()}`);
+        const data = await response.json();
+
+        if (data.success) {
+          setAlerts(data.data.alerts);
+          setStats(data.data.stats);
+        } else {
+          console.error('Failed to fetch alerts:', data.error);
+        }
+      } catch (error) {
+        console.error('Error fetching alerts:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchFilteredData();
+  }, [filterInputs, startDate, endDate]);
 
   const handleLoadAllData = useCallback(() => {
     // Load all data without any filters
     setFilters({});
     setFilterInputs({ ticker: '', signal: '', strategy: '' });
-    fetchData({});
-  }, [fetchData]);
+    
+    // Fetch data directly without filters
+    setIsLoading(true);
+    const fetchAllData = async () => {
+      try {
+        const params = new URLSearchParams();
+        params.append('includeStats', 'true');
+
+        const response = await fetch(`/api/alerts?${params.toString()}`);
+        const data = await response.json();
+
+        if (data.success) {
+          setAlerts(data.data.alerts);
+          setStats(data.data.stats);
+        } else {
+          console.error('Failed to fetch alerts:', data.error);
+        }
+      } catch (error) {
+        console.error('Error fetching alerts:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchAllData();
+  }, []);
 
   const handleFilterInputChange = useCallback((newInputs: {
     ticker: string;

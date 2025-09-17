@@ -8,7 +8,7 @@
 const https = require('https');
 const http = require('http');
 
-const DEFAULT_URL = 'http://localhost:3000/api/tradingview-alert';
+const DEFAULT_URL = 'http://localhost:5001/api/tradingview-alert';
 const DEFAULT_SECRET = 'test_secret_123';
 
 const webhookUrl = process.argv[2] || DEFAULT_URL;
