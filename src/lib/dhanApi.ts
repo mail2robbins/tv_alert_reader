@@ -139,6 +139,10 @@ export async function placeDhanOrder(
   // Get proper Security ID from Dhan's instrument list
   const securityId = await getSecurityId(alert.ticker);
   
+  // Determine order type and price
+  const orderType = orderConfig?.orderType || DHAN_ORDER_TYPES_ORDER.MARKET;
+  const orderPrice = orderType === DHAN_ORDER_TYPES_ORDER.MARKET ? 0 : alert.price;
+  
   // Prepare order request
   const orderRequest: DhanOrderRequest = {
     dhanClientId: DHAN_CLIENT_ID,
@@ -146,10 +150,10 @@ export async function placeDhanOrder(
     transactionType: mapSignalToTransactionType(alert.signal),
     exchangeSegment: orderConfig?.exchangeSegment || DHAN_EXCHANGE_SEGMENTS.NSE_EQ,
     productType: orderConfig?.productType || DHAN_PRODUCT_TYPES.CNC,
-    orderType: orderConfig?.orderType || DHAN_ORDER_TYPES_ORDER.LIMIT,
+    orderType: orderType,
     securityId: securityId,
     quantity: quantity,
-    price: alert.price,
+    price: orderPrice,
     targetPrice: orderConfig?.targetPrice || (positionCalculation?.targetPrice),
     stopLossPrice: orderConfig?.stopLossPrice || (positionCalculation?.stopLossPrice)
   };
@@ -159,7 +163,9 @@ export async function placeDhanOrder(
       ticker: alert.ticker,
       securityId: securityId,
       signal: alert.signal,
-      price: alert.price,
+      orderType: orderType,
+      price: orderPrice,
+      originalPrice: alert.price,
       quantity: quantity,
       correlationId: orderRequest.correlationId
     });

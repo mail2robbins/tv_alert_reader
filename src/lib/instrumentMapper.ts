@@ -74,9 +74,12 @@ function parseCSV(csvText: string): DhanInstrument[] {
     
     instruments.push(instrument as DhanInstrument);
     
-    // Log WELENT entries during parsing
-    if (instrument.SYMBOL_NAME?.toUpperCase().includes('WELENT')) {
-      console.log(`Found WELENT during parsing: ${instrument.SYMBOL_NAME} -> ${instrument.SECURITY_ID}`);
+    // Log specific entries during parsing for debugging
+    if (instrument.SYMBOL_NAME?.toUpperCase().includes('WELENT') || 
+        instrument.SYMBOL_NAME?.toUpperCase().includes('VINCOFE') ||
+        instrument.SYMBOL_NAME?.toUpperCase().includes('GENUSPOWER') ||
+        instrument.SYMBOL_NAME?.toUpperCase().includes('MOBIKWIK')) {
+      console.log(`Found ${instrument.SYMBOL_NAME} during parsing: ${instrument.SYMBOL_NAME} -> ${instrument.SECURITY_ID}`);
     }
   }
   
@@ -130,8 +133,11 @@ function createInstrumentMap(instruments: DhanInstrument[]): InstrumentMap {
         map[displayName] = securityId;
       }
       
-      // Log WELENT related entries for debugging
-      if (ticker.includes('WELENT') || displayName.includes('WELENT')) {
+      // Log specific entries for debugging
+      if (ticker.includes('WELENT') || displayName.includes('WELENT') ||
+          ticker.includes('VINCOFE') || displayName.includes('VINCOFE') ||
+          ticker.includes('GENUSPOWER') || displayName.includes('GENUSPOWER') ||
+          ticker.includes('MOBIKWIK') || displayName.includes('MOBIKWIK')) {
         welentEntries.push(`${ticker} -> ${securityId} (display: ${displayName})`);
       }
     }
@@ -141,9 +147,9 @@ function createInstrumentMap(instruments: DhanInstrument[]): InstrumentMap {
   console.log('Sample mappings:', Object.entries(map).slice(0, 5));
   
   if (welentEntries.length > 0) {
-    console.log('WELENT related entries found:', welentEntries);
+    console.log('Specific entries found:', welentEntries);
   } else {
-    console.log('No WELENT entries found in instrument list');
+    console.log('No specific entries found in instrument list');
   }
   
   return map;
