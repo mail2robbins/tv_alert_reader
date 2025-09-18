@@ -210,6 +210,28 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
               </div>
             )}
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Risk on Capital
+            </label>
+            {isEditing ? (
+              <input
+                type="number"
+                step="0.1"
+                min="0.1"
+                max="5"
+                value={config.riskOnCapital}
+                onChange={(e) => setConfig({ ...config, riskOnCapital: parseFloat(e.target.value) || 1.0 })}
+                className="w-full px-3 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                placeholder="1.0"
+              />
+            ) : (
+              <div className="text-2xl font-semibold text-gray-900">
+                {config.riskOnCapital}x
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Fund Utilization Summary */}
@@ -254,10 +276,18 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
 
           {positionCalculation && (
             <div className="bg-blue-50 rounded-lg p-4">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-sm">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4 text-sm">
                 <div>
-                  <div className="text-gray-700 font-medium">Calculated Quantity</div>
+                  <div className="text-gray-700 font-medium">Base Quantity</div>
                   <div className="font-semibold text-lg text-gray-900">{positionCalculation.calculatedQuantity}</div>
+                </div>
+                <div>
+                  <div className="text-gray-700 font-medium">Risk Multiplier</div>
+                  <div className="font-semibold text-lg text-blue-600">{positionCalculation.riskOnCapital}x</div>
+                </div>
+                <div>
+                  <div className="text-gray-700 font-medium">Final Quantity</div>
+                  <div className="font-semibold text-lg text-green-600">{positionCalculation.finalQuantity}</div>
                 </div>
                 <div>
                   <div className="text-gray-700 font-medium">Order Value</div>
@@ -275,15 +305,24 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
                   <div className="text-gray-700 font-medium">Stop Loss</div>
                   <div className="font-semibold text-lg text-red-600">₹{(positionCalculation.stopLossPrice || 0).toFixed(2)}</div>
                 </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
                   <div className="text-gray-700 font-medium">Target Price</div>
                   <div className="font-semibold text-lg text-green-600">₹{(positionCalculation.targetPrice || 0).toFixed(2)}</div>
+                </div>
+                <div>
+                  <div className="text-gray-700 font-medium">Risk Calculation</div>
+                  <div className="font-semibold text-sm text-gray-600">
+                    {positionCalculation.calculatedQuantity} × {positionCalculation.riskOnCapital} = {positionCalculation.finalQuantity} shares
+                  </div>
                 </div>
               </div>
               
               {positionCalculation.canPlaceOrder ? (
                 <div className="mt-3 text-sm text-green-600 font-medium">
-                  ✅ Order can be placed with stop loss and target price
+                  ✅ Order can be placed with {positionCalculation.finalQuantity} shares (Risk: {positionCalculation.riskOnCapital}x)
                 </div>
               ) : (
                 <div className="mt-3 text-sm text-red-600 font-medium">
