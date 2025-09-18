@@ -187,10 +187,20 @@ export async function mapTickerToSecurityId(ticker: string): Promise<string> {
     if (similarTickers.length > 0) {
       console.warn(`❌ Ticker ${ticker} not found. Similar tickers: ${similarTickers.join(', ')}`);
       
-      // Try to find the best match
-      const bestMatch = similarTickers.find(key => 
-        key.startsWith(upperTicker) || upperTicker.startsWith(key)
+      // Try to find the best match - prioritize exact word matches
+      let bestMatch = similarTickers.find(key => 
+        key.includes(upperTicker) && key.split(' ').includes(upperTicker)
       );
+      
+      // If no exact word match, use any match that contains the ticker
+      if (!bestMatch) {
+        bestMatch = similarTickers.find(key => key.includes(upperTicker));
+      }
+      
+      // If still no match, use the first similar ticker
+      if (!bestMatch) {
+        bestMatch = similarTickers[0];
+      }
       
       if (bestMatch) {
         console.log(`🎯 Using best match: ${bestMatch} -> ${instrumentMap[bestMatch]}`);
