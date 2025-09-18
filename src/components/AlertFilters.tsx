@@ -61,7 +61,7 @@ export default function AlertFilters({ onLoadData, isLoading, availableStrategie
             value={ticker}
             onChange={(e) => handleInputChange('ticker', e.target.value.toUpperCase())}
             placeholder="e.g., AAPL"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
           />
         </div>
 
@@ -72,7 +72,7 @@ export default function AlertFilters({ onLoadData, isLoading, availableStrategie
           <select
             value={signal}
             onChange={(e) => handleInputChange('signal', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
           >
             <option value="">All Signals</option>
             <option value="BUY">BUY</option>
@@ -88,7 +88,7 @@ export default function AlertFilters({ onLoadData, isLoading, availableStrategie
           <select
             value={strategy}
             onChange={(e) => handleInputChange('strategy', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
           >
             <option value="">All Strategies</option>
             {availableStrategies.map((strategyName) => (

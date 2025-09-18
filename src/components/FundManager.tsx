@@ -94,7 +94,7 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
                 type="number"
                 value={config.availableFunds}
                 onChange={(e) => setConfig({ ...config, availableFunds: parseFloat(e.target.value) || 0 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
                 placeholder="20000"
               />
             ) : (
@@ -116,7 +116,7 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
                 max="10"
                 value={config.leverage}
                 onChange={(e) => setConfig({ ...config, leverage: parseFloat(e.target.value) || 1 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
                 placeholder="2"
               />
             ) : (
@@ -138,7 +138,7 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
                 max="1"
                 value={config.maxPositionSize}
                 onChange={(e) => setConfig({ ...config, maxPositionSize: parseFloat(e.target.value) || 0.1 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
                 placeholder="0.1"
               />
             ) : (
@@ -157,7 +157,7 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
                 type="number"
                 value={config.minOrderValue}
                 onChange={(e) => setConfig({ ...config, minOrderValue: parseFloat(e.target.value) || 1000 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
                 placeholder="1000"
               />
             ) : (
@@ -179,7 +179,7 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
                 max="0.5"
                 value={config.stopLossPercentage}
                 onChange={(e) => setConfig({ ...config, stopLossPercentage: parseFloat(e.target.value) || 0.01 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
                 placeholder="0.01"
               />
             ) : (
@@ -201,7 +201,7 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
                 max="1"
                 value={config.targetPricePercentage}
                 onChange={(e) => setConfig({ ...config, targetPricePercentage: parseFloat(e.target.value) || 0.015 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
                 placeholder="0.015"
               />
             ) : (
@@ -246,7 +246,7 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
               type="number"
               value={testPrice}
               onChange={(e) => setTestPrice(parseFloat(e.target.value) || 0)}
-              className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-1 border border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
               placeholder="100"
             />
             <span className="text-sm text-gray-700 font-medium">₹</span>

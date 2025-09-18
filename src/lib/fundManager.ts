@@ -31,7 +31,7 @@ const DEFAULT_FUND_CONFIG: FundConfig = {
   leverage: parseFloat(process.env.LEVERAGE || '2'),
   maxPositionSize: parseFloat(process.env.MAX_POSITION_SIZE || '0.1'), // 10% max per position
   minOrderValue: parseFloat(process.env.MIN_ORDER_VALUE || '1000'),    // Minimum ₹1000 order
-  maxOrderValue: parseFloat(process.env.MAX_ORDER_VALUE || '5000'),    // Maximum ₹5000 per order
+  maxOrderValue: parseFloat(process.env.MAX_ORDER_VALUE || '20000'),   // Maximum ₹20000 per order
   stopLossPercentage: parseFloat(process.env.STOP_LOSS_PERCENTAGE || '0.01'),    // 1% stop loss
   targetPricePercentage: parseFloat(process.env.TARGET_PRICE_PERCENTAGE || '0.015') // 1.5% target
 };

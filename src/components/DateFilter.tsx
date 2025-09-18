@@ -73,7 +73,7 @@ export default function DateFilter({ onDateChange, onLoadAllData, isLoading, sta
             startDate={localStartDate}
             endDate={localEndDate}
             maxDate={new Date()}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
             placeholderText="Select start date"
             dateFormat="yyyy-MM-dd"
           />
@@ -91,7 +91,7 @@ export default function DateFilter({ onDateChange, onLoadAllData, isLoading, sta
             endDate={localEndDate}
             minDate={localStartDate || undefined}
             maxDate={new Date()}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
             placeholderText="Select end date"
             dateFormat="yyyy-MM-dd"
           />
