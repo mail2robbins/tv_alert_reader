@@ -218,20 +218,20 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
             <h4 className="text-sm font-medium text-gray-700 mb-3">Fund Utilization</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
-                <div className="text-gray-500">Leveraged Funds</div>
-                <div className="font-semibold">{formatCurrency(utilization.leveragedFunds)}</div>
+                <div className="text-gray-700 font-medium">Leveraged Funds</div>
+                <div className="font-semibold text-gray-900">{formatCurrency(utilization.leveragedFunds)}</div>
               </div>
               <div>
-                <div className="text-gray-500">Max Position Value</div>
-                <div className="font-semibold">{formatCurrency(utilization.maxPositionValue)}</div>
+                <div className="text-gray-700 font-medium">Max Position Value</div>
+                <div className="font-semibold text-gray-900">{formatCurrency(utilization.maxPositionValue)}</div>
               </div>
               <div>
-                <div className="text-gray-500">Utilization</div>
-                <div className="font-semibold">{formatPercentage(utilization.utilizationPercentage)}</div>
+                <div className="text-gray-700 font-medium">Utilization</div>
+                <div className="font-semibold text-gray-900">{formatPercentage(utilization.utilizationPercentage)}</div>
               </div>
               <div>
-                <div className="text-gray-500">Max Position Size</div>
-                <div className="font-semibold">{formatPercentage(utilization.maxPositionSize * 100)}</div>
+                <div className="text-gray-700 font-medium">Max Position Size</div>
+                <div className="font-semibold text-gray-900">{formatPercentage(utilization.maxPositionSize * 100)}</div>
               </div>
             </div>
           </div>
@@ -241,7 +241,7 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
         <div className="border-t pt-6">
           <h4 className="text-sm font-medium text-gray-700 mb-3">Position Size Calculator</h4>
           <div className="flex items-center gap-4 mb-4">
-            <label className="text-sm text-gray-600">Test Stock Price:</label>
+            <label className="text-sm text-gray-700 font-medium">Test Stock Price:</label>
             <input
               type="number"
               value={testPrice}
@@ -249,35 +249,35 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
               className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="100"
             />
-            <span className="text-sm text-gray-500">₹</span>
+            <span className="text-sm text-gray-700 font-medium">₹</span>
           </div>
 
           {positionCalculation && (
             <div className="bg-blue-50 rounded-lg p-4">
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-sm">
                 <div>
-                  <div className="text-gray-500">Calculated Quantity</div>
-                  <div className="font-semibold text-lg">{positionCalculation.calculatedQuantity}</div>
+                  <div className="text-gray-700 font-medium">Calculated Quantity</div>
+                  <div className="font-semibold text-lg text-gray-900">{positionCalculation.calculatedQuantity}</div>
                 </div>
                 <div>
-                  <div className="text-gray-500">Order Value</div>
-                  <div className="font-semibold text-lg">{formatCurrency(positionCalculation.orderValue)}</div>
+                  <div className="text-gray-700 font-medium">Order Value</div>
+                  <div className="font-semibold text-lg text-gray-900">₹{positionCalculation.orderValue.toFixed(2)}</div>
                 </div>
                 <div>
-                  <div className="text-gray-500">Leveraged Value</div>
-                  <div className="font-semibold text-lg">{formatCurrency(positionCalculation.leveragedValue)}</div>
+                  <div className="text-gray-700 font-medium">Leveraged Value</div>
+                  <div className="font-semibold text-lg text-gray-900">₹{positionCalculation.leveragedValue.toFixed(2)}</div>
                 </div>
                 <div>
-                  <div className="text-gray-500">Position Size</div>
-                  <div className="font-semibold text-lg">{formatPercentage(positionCalculation.positionSizePercentage)}</div>
+                  <div className="text-gray-700 font-medium">Position Size</div>
+                  <div className="font-semibold text-lg text-gray-900">{formatPercentage(positionCalculation.positionSizePercentage)}</div>
                 </div>
                 <div>
-                  <div className="text-gray-500">Stop Loss</div>
-                  <div className="font-semibold text-lg text-red-600">{formatCurrency(positionCalculation.stopLossPrice || 0)}</div>
+                  <div className="text-gray-700 font-medium">Stop Loss</div>
+                  <div className="font-semibold text-lg text-red-600">₹{(positionCalculation.stopLossPrice || 0).toFixed(2)}</div>
                 </div>
                 <div>
-                  <div className="text-gray-500">Target Price</div>
-                  <div className="font-semibold text-lg text-green-600">{formatCurrency(positionCalculation.targetPrice || 0)}</div>
+                  <div className="text-gray-700 font-medium">Target Price</div>
+                  <div className="font-semibold text-lg text-green-600">₹{(positionCalculation.targetPrice || 0).toFixed(2)}</div>
                 </div>
               </div>
               

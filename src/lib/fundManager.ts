@@ -57,11 +57,9 @@ export function calculatePositionSize(
   // Calculate leveraged funds
   const leveragedFunds = config.availableFunds * config.leverage;
   
-  // Calculate maximum position value (percentage of leveraged funds)
-  const maxPositionValue = leveragedFunds * config.maxPositionSize;
-  
-  // Calculate quantity based on stock price and max position value
-  let calculatedQuantity = Math.floor(maxPositionValue / stockPrice);
+  // Calculate quantity based on stock price and available capital
+  // The quantity should result in an order value close to the available capital
+  let calculatedQuantity = Math.floor(config.availableFunds / stockPrice);
   
   // Calculate actual order value
   const orderValue = calculatedQuantity * stockPrice;
@@ -70,11 +68,11 @@ export function calculatePositionSize(
   const leveragedValue = orderValue / config.leverage;
   
   // Calculate position size as percentage of available funds
-  const positionSizePercentage = (leveragedValue / config.availableFunds) * 100;
+  const positionSizePercentage = (orderValue / config.availableFunds) * 100;
   
-  // Calculate stop loss and target prices
-  const stopLossPrice = stockPrice * (1 - config.stopLossPercentage);
-  const targetPrice = stockPrice * (1 + config.targetPricePercentage);
+  // Calculate stop loss and target prices with 2 decimal places
+  const stopLossPrice = Math.round(stockPrice * (1 - config.stopLossPercentage) * 100) / 100;
+  const targetPrice = Math.round(stockPrice * (1 + config.targetPricePercentage) * 100) / 100;
   
   // Determine if order can be placed
   let canPlaceOrder = true;
@@ -107,9 +105,9 @@ export function calculatePositionSize(
       stopLossPrice,
       targetPrice
     };
-  } else if (positionSizePercentage > (config.maxPositionSize * 100)) {
+  } else if (positionSizePercentage > 100) {
     canPlaceOrder = false;
-    reason = `Position size (${positionSizePercentage.toFixed(2)}%) exceeds maximum (${(config.maxPositionSize * 100).toFixed(2)}%)`;
+    reason = `Position size (${positionSizePercentage.toFixed(2)}%) exceeds available capital (100%)`;
   }
   
   return {

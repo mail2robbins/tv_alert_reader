@@ -131,7 +131,9 @@ export async function POST(request: NextRequest) {
             orderId: placedOrder.id,
             quantity: positionCalculation.calculatedQuantity,
             orderValue: positionCalculation.orderValue,
-            positionSize: positionCalculation.positionSizePercentage.toFixed(2) + '%'
+            positionSize: positionCalculation.positionSizePercentage.toFixed(2) + '%',
+            stopLossPrice: positionCalculation.stopLossPrice?.toFixed(2),
+            targetPrice: positionCalculation.targetPrice?.toFixed(2)
           });
         }
       } catch (orderError) {

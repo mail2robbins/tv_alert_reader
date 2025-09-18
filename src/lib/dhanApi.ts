@@ -128,8 +128,8 @@ export async function placeDhanOrder(
       orderValue: positionCalculation.orderValue,
       leveragedValue: positionCalculation.leveragedValue,
       positionSizePercentage: positionCalculation.positionSizePercentage.toFixed(2) + '%',
-      stopLossPrice: positionCalculation.stopLossPrice,
-      targetPrice: positionCalculation.targetPrice
+      stopLossPrice: positionCalculation.stopLossPrice?.toFixed(2),
+      targetPrice: positionCalculation.targetPrice?.toFixed(2)
     });
   } else {
     // Use manual quantity
