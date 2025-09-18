@@ -370,7 +370,7 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
                 </div>
                 <div>
                   <div className="text-gray-700 font-medium">Risk Multiplier</div>
-                  <div className="font-semibold text-lg text-blue-600">{positionCalculation.riskOnCapital}x</div>
+                  <div className="font-semibold text-lg text-blue-600">{config.riskOnCapital}x</div>
                 </div>
                 <div>
                   <div className="text-gray-700 font-medium">Final Quantity</div>
@@ -402,14 +402,14 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
                 <div>
                   <div className="text-gray-700 font-medium">Risk Calculation</div>
                   <div className="font-semibold text-sm text-gray-600">
-                    {positionCalculation.calculatedQuantity} × {positionCalculation.riskOnCapital} = {positionCalculation.finalQuantity} shares
+                    {positionCalculation.calculatedQuantity} × {config.riskOnCapital} = {positionCalculation.finalQuantity} shares
                   </div>
                 </div>
               </div>
               
               {positionCalculation.canPlaceOrder ? (
                 <div className="mt-3 text-sm text-green-600 font-medium">
-                  ✅ Order can be placed with {positionCalculation.finalQuantity} shares (Risk: {positionCalculation.riskOnCapital}x)
+                  ✅ Order can be placed with {positionCalculation.finalQuantity} shares (Risk: {config.riskOnCapital}x)
                 </div>
               ) : (
                 <div className="mt-3 text-sm text-red-600 font-medium">
