@@ -54,21 +54,18 @@ export function calculatePositionSize(
 ): PositionCalculation {
   const config = { ...DEFAULT_FUND_CONFIG, ...customConfig };
   
-  // Calculate leveraged funds
-  const leveragedFunds = config.availableFunds * config.leverage;
-  
   // Calculate quantity based on stock price and available capital
-  // The quantity should result in an order value close to the available capital
+  // The quantity should use the full capital amount, not leveraged amount
   let calculatedQuantity = Math.floor(config.availableFunds / stockPrice);
   
-  // Calculate actual order value
+  // Calculate actual order value (total value of stocks bought)
   const orderValue = calculatedQuantity * stockPrice;
   
-  // Calculate leveraged value (actual capital used)
+  // Calculate leveraged value (actual capital used from your account)
   const leveragedValue = orderValue / config.leverage;
   
-  // Calculate position size as percentage of available funds
-  const positionSizePercentage = (orderValue / config.availableFunds) * 100;
+  // Calculate position size as percentage of available funds (based on actual capital used)
+  const positionSizePercentage = (leveragedValue / config.availableFunds) * 100;
   
   // Calculate stop loss and target prices with 2 decimal places
   const stopLossPrice = Math.round(stockPrice * (1 - config.stopLossPercentage) * 100) / 100;
@@ -81,12 +78,13 @@ export function calculatePositionSize(
   if (calculatedQuantity <= 0) {
     canPlaceOrder = false;
     reason = 'Stock price too high for available funds';
-  } else if (orderValue < config.minOrderValue) {
+  } else if (leveragedValue < config.minOrderValue) {
     canPlaceOrder = false;
-    reason = `Order value (₹${orderValue.toFixed(2)}) below minimum (₹${config.minOrderValue})`;
-  } else if (orderValue > config.maxOrderValue) {
-    // Adjust quantity to max order value
-    calculatedQuantity = Math.floor(config.maxOrderValue / stockPrice);
+    reason = `Leveraged value (₹${leveragedValue.toFixed(2)}) below minimum (₹${config.minOrderValue})`;
+  } else if (leveragedValue > config.maxOrderValue) {
+    // Adjust quantity to max leveraged value
+    const maxOrderValueWithLeverage = config.maxOrderValue * config.leverage;
+    calculatedQuantity = Math.floor(maxOrderValueWithLeverage / stockPrice);
     const adjustedOrderValue = calculatedQuantity * stockPrice;
     const adjustedLeveragedValue = adjustedOrderValue / config.leverage;
     const adjustedPositionSizePercentage = (adjustedLeveragedValue / config.availableFunds) * 100;
