@@ -54,12 +54,18 @@ function parseCSV(csvText: string): DhanInstrument[] {
   const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
   const instruments: DhanInstrument[] = [];
   
+  console.log(`Parsing CSV with ${lines.length} lines and ${headers.length} headers`);
+  console.log('Headers:', headers.slice(0, 10)); // Show first 10 headers
+  
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
     
     const values = parseCSVLine(line);
-    if (values.length !== headers.length) continue;
+    if (values.length !== headers.length) {
+      // Skip malformed lines
+      continue;
+    }
     
     const instrument: Partial<DhanInstrument> = {};
     headers.forEach((header, index) => {
@@ -67,8 +73,14 @@ function parseCSV(csvText: string): DhanInstrument[] {
     });
     
     instruments.push(instrument as DhanInstrument);
+    
+    // Log WELENT entries during parsing
+    if (instrument.SYMBOL_NAME?.toUpperCase().includes('WELENT')) {
+      console.log(`Found WELENT during parsing: ${instrument.SYMBOL_NAME} -> ${instrument.SECURITY_ID}`);
+    }
   }
   
+  console.log(`Parsed ${instruments.length} instruments from CSV`);
   return instruments;
 }
 
@@ -98,6 +110,7 @@ function parseCSVLine(line: string): string[] {
 // Create ticker to Security ID mapping
 function createInstrumentMap(instruments: DhanInstrument[]): InstrumentMap {
   const map: InstrumentMap = {};
+  const welentEntries: string[] = [];
   
   instruments.forEach(instrument => {
     // Only include NSE Equity instruments
@@ -107,20 +120,32 @@ function createInstrumentMap(instruments: DhanInstrument[]): InstrumentMap {
       
       const ticker = instrument.SYMBOL_NAME.toUpperCase();
       const securityId = instrument.SECURITY_ID;
+      const displayName = instrument.DISPLAY_NAME.toUpperCase();
       
       // Use the ticker as key and security ID as value
       map[ticker] = securityId;
       
       // Also add the display name as a key if it's different
-      if (instrument.DISPLAY_NAME && 
-          instrument.DISPLAY_NAME.toUpperCase() !== ticker) {
-        map[instrument.DISPLAY_NAME.toUpperCase()] = securityId;
+      if (displayName && displayName !== ticker) {
+        map[displayName] = securityId;
+      }
+      
+      // Log WELENT related entries for debugging
+      if (ticker.includes('WELENT') || displayName.includes('WELENT')) {
+        welentEntries.push(`${ticker} -> ${securityId} (display: ${displayName})`);
       }
     }
   });
   
   console.log(`Created instrument map with ${Object.keys(map).length} NSE equity instruments`);
   console.log('Sample mappings:', Object.entries(map).slice(0, 5));
+  
+  if (welentEntries.length > 0) {
+    console.log('WELENT related entries found:', welentEntries);
+  } else {
+    console.log('No WELENT entries found in instrument list');
+  }
+  
   return map;
 }
 
@@ -161,6 +186,16 @@ export async function mapTickerToSecurityId(ticker: string): Promise<string> {
     
     if (similarTickers.length > 0) {
       console.warn(`❌ Ticker ${ticker} not found. Similar tickers: ${similarTickers.join(', ')}`);
+      
+      // Try to find the best match
+      const bestMatch = similarTickers.find(key => 
+        key.startsWith(upperTicker) || upperTicker.startsWith(key)
+      );
+      
+      if (bestMatch) {
+        console.log(`🎯 Using best match: ${bestMatch} -> ${instrumentMap[bestMatch]}`);
+        return instrumentMap[bestMatch];
+      }
     } else {
       console.warn(`❌ Ticker ${ticker} not found in instrument list`);
       // Show some sample tickers for debugging
