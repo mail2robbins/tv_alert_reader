@@ -167,7 +167,18 @@ export default function Home() {
         <div className="mb-8">
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">TradingView Alert Reader</h1>
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                <svg className="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 32 32">
+                  <rect width="32" height="32" rx="6" fill="currentColor"/>
+                  <path d="M4 24 L8 20 L12 22 L16 16 L20 18 L24 12 L28 14" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                  <circle cx="8" cy="20" r="2" fill="#10b981"/>
+                  <circle cx="16" cy="16" r="2" fill="#10b981"/>
+                  <circle cx="24" cy="12" r="2" fill="#10b981"/>
+                  <path d="M24 6 C24.5 6 25 6.5 25 7 L25 9 C25 9.5 24.5 10 24 10 L22 10 C21.5 10 21 9.5 21 9 L21 7 C21 6.5 21.5 6 22 6 L24 6 Z" fill="#f59e0b"/>
+                  <circle cx="26" cy="4" r="2" fill="#ef4444"/>
+                </svg>
+                TradingView Alert Reader
+              </h1>
               <p className="mt-2 text-gray-600">
                 Monitor and analyze your TradingView alerts in real-time
               </p>

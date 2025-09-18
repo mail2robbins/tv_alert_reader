@@ -1,0 +1,24 @@
+{
+  "name": "TradingView Alert Reader",
+  "short_name": "TV Alerts",
+  "description": "Professional trading alert management system with Dhan.co integration",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1f2937",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["finance", "productivity", "business"],
+  "lang": "en",
+  "orientation": "portrait-primary"
+}
