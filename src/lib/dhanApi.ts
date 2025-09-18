@@ -1,5 +1,6 @@
 import { TradingViewAlert } from '@/types/alert';
 import { calculatePositionSize } from './fundManager';
+import { mapTickerToSecurityId } from './instrumentMapper';
 
 // Dhan.co API configuration
 const DHAN_API_BASE_URL = 'https://api.dhan.co/v2/super/orders';
@@ -76,11 +77,9 @@ function mapSignalToTransactionType(signal: string): 'BUY' | 'SELL' {
   }
 }
 
-// Map ticker to security ID (you may need to customize this based on your requirements)
-function mapTickerToSecurityId(ticker: string): string {
-  // For NSE stocks, the security ID is usually the ticker symbol
-  // You may need to implement a mapping based on your specific requirements
-  return ticker.toUpperCase();
+// Map ticker to security ID using Dhan's instrument list
+async function getSecurityId(ticker: string): Promise<string> {
+  return await mapTickerToSecurityId(ticker);
 }
 
 // Place order on Dhan.co with automatic position sizing
@@ -137,6 +136,9 @@ export async function placeDhanOrder(
     console.log('Manual quantity:', quantity);
   }
 
+  // Get proper Security ID from Dhan's instrument list
+  const securityId = await getSecurityId(alert.ticker);
+  
   // Prepare order request
   const orderRequest: DhanOrderRequest = {
     dhanClientId: DHAN_CLIENT_ID,
@@ -145,7 +147,7 @@ export async function placeDhanOrder(
     exchangeSegment: orderConfig?.exchangeSegment || DHAN_EXCHANGE_SEGMENTS.NSE_EQ,
     productType: orderConfig?.productType || DHAN_PRODUCT_TYPES.CNC,
     orderType: orderConfig?.orderType || DHAN_ORDER_TYPES_ORDER.LIMIT,
-    securityId: mapTickerToSecurityId(alert.ticker),
+    securityId: securityId,
     quantity: quantity,
     price: alert.price,
     targetPrice: orderConfig?.targetPrice || (positionCalculation?.targetPrice),
@@ -155,6 +157,7 @@ export async function placeDhanOrder(
   try {
     console.log('Placing Dhan order:', {
       ticker: alert.ticker,
+      securityId: securityId,
       signal: alert.signal,
       price: alert.price,
       quantity: quantity,
