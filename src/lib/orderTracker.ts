@@ -128,6 +128,56 @@ export function getOrderStats(): {
   };
 }
 
+// Get orders by date range
+export function getOrdersByDateRange(startDate: Date, endDate: Date): PlacedOrder[] {
+  return memoryOrders
+    .filter(order => {
+      const orderDate = new Date(order.timestamp);
+      return orderDate >= startDate && orderDate <= endDate;
+    })
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+}
+
+// Get orders with custom filters
+export function getOrdersWithFilters(filters: {
+  tickers?: string[];
+  statuses?: PlacedOrder['status'][];
+  startDate?: Date;
+  endDate?: Date;
+}): PlacedOrder[] {
+  let filteredOrders = [...memoryOrders];
+  
+  if (filters.tickers && filters.tickers.length > 0) {
+    filteredOrders = filteredOrders.filter(order => 
+      filters.tickers!.some(ticker => 
+        order.ticker.toUpperCase() === ticker.toUpperCase()
+      )
+    );
+  }
+  
+  if (filters.statuses && filters.statuses.length > 0) {
+    filteredOrders = filteredOrders.filter(order => 
+      filters.statuses!.includes(order.status)
+    );
+  }
+  
+  if (filters.startDate) {
+    filteredOrders = filteredOrders.filter(order => 
+      new Date(order.timestamp) >= filters.startDate!
+    );
+  }
+  
+  if (filters.endDate) {
+    filteredOrders = filteredOrders.filter(order => 
+      new Date(order.timestamp) <= filters.endDate!
+    );
+  }
+  
+  return filteredOrders.sort((a, b) => 
+    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+}
+
 // Update order status
 export function updateOrderStatus(orderId: string, status: PlacedOrder['status'], error?: string): boolean {
   const order = memoryOrders.find(o => o.id === orderId);
