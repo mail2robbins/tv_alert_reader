@@ -40,7 +40,7 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
   useEffect(() => {
     if (config) {
       setUtilization(getFundUtilization());
-      setPositionCalculation(calculatePositionSize(testPrice));
+      setPositionCalculation(calculatePositionSize(testPrice, config));
     }
   }, [testPrice, config]);
 
