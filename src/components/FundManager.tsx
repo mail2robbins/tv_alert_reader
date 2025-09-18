@@ -1,41 +1,98 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getFundConfig, updateFundConfig, calculatePositionSize, getFundUtilization, validateFundConfig } from '@/lib/fundManager';
+import { calculatePositionSize, getFundUtilization, validateFundConfig, FundConfig } from '@/lib/fundManager';
 
 interface FundManagerProps {
   onConfigUpdate?: () => void;
 }
 
 export default function FundManager({ onConfigUpdate }: FundManagerProps) {
-  const [config, setConfig] = useState(getFundConfig());
+  const [config, setConfig] = useState<FundConfig | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [testPrice, setTestPrice] = useState(100);
   const [positionCalculation, setPositionCalculation] = useState<ReturnType<typeof calculatePositionSize> | null>(null);
   const [utilization, setUtilization] = useState<ReturnType<typeof getFundUtilization> | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load fund configuration from API
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const response = await fetch('/api/fund-config');
+        const data = await response.json();
+        
+        if (data.success) {
+          setConfig(data.data);
+        } else {
+          console.error('Failed to load fund config:', data.error);
+        }
+      } catch (error) {
+        console.error('Error loading fund config:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadConfig();
+  }, []);
 
   useEffect(() => {
-    setUtilization(getFundUtilization());
-    setPositionCalculation(calculatePositionSize(testPrice));
+    if (config) {
+      setUtilization(getFundUtilization());
+      setPositionCalculation(calculatePositionSize(testPrice));
+    }
   }, [testPrice, config]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!config) return;
+    
     const validation = validateFundConfig(config);
     if (!validation.isValid) {
       alert('Configuration errors:\n' + validation.errors.join('\n'));
       return;
     }
 
-    updateFundConfig(config);
-    setIsEditing(false);
-    if (onConfigUpdate) {
-      onConfigUpdate();
+    try {
+      const response = await fetch('/api/fund-config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(config),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setConfig(data.data);
+        setIsEditing(false);
+        if (onConfigUpdate) {
+          onConfigUpdate();
+        }
+      } else {
+        alert('Failed to save configuration: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error saving config:', error);
+      alert('Failed to save configuration');
     }
   };
 
-  const handleReset = () => {
-    setConfig(getFundConfig());
-    setIsEditing(false);
+  const handleReset = async () => {
+    try {
+      const response = await fetch('/api/fund-config');
+      const data = await response.json();
+      
+      if (data.success) {
+        setConfig(data.data);
+        setIsEditing(false);
+      } else {
+        console.error('Failed to reset config:', data.error);
+      }
+    } catch (error) {
+      console.error('Error resetting config:', error);
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -50,6 +107,36 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
   const formatPercentage = (value: number) => {
     return `${value.toFixed(2)}%`;
   };
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">Fund Management</h3>
+        </div>
+        <div className="p-6">
+          <div className="flex items-center justify-center py-8">
+            <div className="text-gray-500">Loading configuration...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!config) {
+    return (
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">Fund Management</h3>
+        </div>
+        <div className="p-6">
+          <div className="flex items-center justify-center py-8">
+            <div className="text-red-500">Failed to load configuration</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">
