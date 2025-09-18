@@ -8,6 +8,7 @@ export interface FundConfig {
   maxOrderValue: number;         // Maximum order value per order
   stopLossPercentage: number;    // Stop loss percentage (e.g., 0.01 = 1%)
   targetPricePercentage: number; // Target price percentage (e.g., 0.015 = 1.5%)
+  riskOnCapital: number;         // Risk on Capital multiplier for quantity (e.g., 1.5 = 150% of calculated quantity)
 }
 
 export interface PositionCalculation {
@@ -16,6 +17,8 @@ export interface PositionCalculation {
   leverage: number;
   maxPositionSize: number;
   calculatedQuantity: number;
+  riskOnCapital: number;
+  finalQuantity: number;          // Final quantity after applying risk on capital multiplier
   orderValue: number;
   leveragedValue: number;
   positionSizePercentage: number;
@@ -33,7 +36,8 @@ const DEFAULT_FUND_CONFIG: FundConfig = {
   minOrderValue: parseFloat(process.env.MIN_ORDER_VALUE || '1000'),    // Minimum ₹1000 order
   maxOrderValue: parseFloat(process.env.MAX_ORDER_VALUE || '20000'),   // Maximum ₹20000 per order
   stopLossPercentage: parseFloat(process.env.STOP_LOSS_PERCENTAGE || '0.01'),    // 1% stop loss
-  targetPricePercentage: parseFloat(process.env.TARGET_PRICE_PERCENTAGE || '0.015') // 1.5% target
+  targetPricePercentage: parseFloat(process.env.TARGET_PRICE_PERCENTAGE || '0.015'), // 1.5% target
+  riskOnCapital: parseFloat(process.env.RISK_ON_CAPITAL || '1.0')     // 100% of calculated quantity (no multiplier)
 };
 
 // Get current fund configuration
@@ -56,10 +60,13 @@ export function calculatePositionSize(
   
   // Calculate quantity based on stock price and available capital
   // The quantity should use the full capital amount, not leveraged amount
-  let calculatedQuantity = Math.floor(config.availableFunds / stockPrice);
+  const calculatedQuantity = Math.floor(config.availableFunds / stockPrice);
   
-  // Calculate actual order value (total value of stocks bought)
-  const orderValue = calculatedQuantity * stockPrice;
+  // Apply risk on capital multiplier to get final quantity
+  const finalQuantity = Math.floor(calculatedQuantity * config.riskOnCapital);
+  
+  // Calculate actual order value (total value of stocks bought) using final quantity
+  const orderValue = finalQuantity * stockPrice;
   
   // Calculate leveraged value (actual capital used from your account)
   const leveragedValue = orderValue / config.leverage;
@@ -78,14 +85,17 @@ export function calculatePositionSize(
   if (calculatedQuantity <= 0) {
     canPlaceOrder = false;
     reason = 'Stock price too high for available funds';
+  } else if (finalQuantity <= 0) {
+    canPlaceOrder = false;
+    reason = 'Risk on capital multiplier resulted in zero quantity';
   } else if (leveragedValue < config.minOrderValue) {
     canPlaceOrder = false;
     reason = `Leveraged value (₹${leveragedValue.toFixed(2)}) below minimum (₹${config.minOrderValue})`;
   } else if (leveragedValue > config.maxOrderValue) {
     // Adjust quantity to max leveraged value
     const maxOrderValueWithLeverage = config.maxOrderValue * config.leverage;
-    calculatedQuantity = Math.floor(maxOrderValueWithLeverage / stockPrice);
-    const adjustedOrderValue = calculatedQuantity * stockPrice;
+    const adjustedFinalQuantity = Math.floor(maxOrderValueWithLeverage / stockPrice);
+    const adjustedOrderValue = adjustedFinalQuantity * stockPrice;
     const adjustedLeveragedValue = adjustedOrderValue / config.leverage;
     const adjustedPositionSizePercentage = (adjustedLeveragedValue / config.availableFunds) * 100;
     
@@ -95,6 +105,8 @@ export function calculatePositionSize(
       leverage: config.leverage,
       maxPositionSize: config.maxPositionSize,
       calculatedQuantity,
+      riskOnCapital: config.riskOnCapital,
+      finalQuantity: adjustedFinalQuantity,
       orderValue: adjustedOrderValue,
       leveragedValue: adjustedLeveragedValue,
       positionSizePercentage: adjustedPositionSizePercentage,
@@ -114,6 +126,8 @@ export function calculatePositionSize(
     leverage: config.leverage,
     maxPositionSize: config.maxPositionSize,
     calculatedQuantity,
+    riskOnCapital: config.riskOnCapital,
+    finalQuantity,
     orderValue,
     leveragedValue,
     positionSizePercentage,
@@ -203,6 +217,10 @@ export function validateFundConfig(config: FundConfig): {
   
   if (config.targetPricePercentage <= 0 || config.targetPricePercentage > 1) {
     errors.push('Target price percentage must be between 0% and 100%');
+  }
+  
+  if (config.riskOnCapital <= 0 || config.riskOnCapital > 5) {
+    errors.push('Risk on Capital must be between 0% and 500%');
   }
   
   return {

@@ -120,10 +120,12 @@ export async function placeDhanOrder(
       };
     }
     
-    quantity = positionCalculation.calculatedQuantity;
+    quantity = positionCalculation.finalQuantity;
     console.log('Auto position sizing:', {
       stockPrice: alert.price,
-      calculatedQuantity: quantity,
+      calculatedQuantity: positionCalculation.calculatedQuantity,
+      riskOnCapital: positionCalculation.riskOnCapital,
+      finalQuantity: quantity,
       orderValue: positionCalculation.orderValue,
       leveragedValue: positionCalculation.leveragedValue,
       positionSizePercentage: positionCalculation.positionSizePercentage.toFixed(2) + '%',

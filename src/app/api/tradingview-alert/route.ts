@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
           const placedOrder = storePlacedOrder(
             validation.alert!, 
             alertId, 
-            positionCalculation.calculatedQuantity, 
+            positionCalculation.finalQuantity, 
             dhanResponse,
             positionCalculation
           );
@@ -129,7 +129,9 @@ export async function POST(request: NextRequest) {
           
           console.log('Order placed successfully:', {
             orderId: placedOrder.id,
-            quantity: positionCalculation.calculatedQuantity,
+            calculatedQuantity: positionCalculation.calculatedQuantity,
+            riskOnCapital: positionCalculation.riskOnCapital,
+            finalQuantity: positionCalculation.finalQuantity,
             orderValue: positionCalculation.orderValue,
             positionSize: positionCalculation.positionSizePercentage.toFixed(2) + '%',
             stopLossPrice: positionCalculation.stopLossPrice?.toFixed(2),
