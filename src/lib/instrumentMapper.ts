@@ -165,7 +165,7 @@ async function getInstrumentCache(): Promise<InstrumentMap> {
   return instrumentCache;
 }
 
-// Map ticker to Security ID
+// Map ticker to Security ID using comprehensive matching logic
 export async function mapTickerToSecurityId(ticker: string): Promise<string> {
   try {
     const instrumentMap = await getInstrumentCache();
@@ -174,38 +174,65 @@ export async function mapTickerToSecurityId(ticker: string): Promise<string> {
     console.log(`Looking for ticker: ${upperTicker}`);
     console.log(`Total instruments in cache: ${Object.keys(instrumentMap).length}`);
     
+    // First, try exact match
     if (instrumentMap[upperTicker]) {
-      console.log(`✅ Mapped ticker ${ticker} to Security ID: ${instrumentMap[upperTicker]}`);
+      console.log(`✅ Exact match found: ${ticker} -> Security ID: ${instrumentMap[upperTicker]}`);
       return instrumentMap[upperTicker];
     }
     
-    // If not found, try to find similar tickers
-    const similarTickers = Object.keys(instrumentMap).filter(key => 
-      key.includes(upperTicker) || upperTicker.includes(key)
-    );
+    // If not found, use comprehensive matching logic
+    const normalizedTicker = upperTicker.replace(/[^A-Z0-9]/g, '');
+    console.log(`Normalized ticker: ${normalizedTicker}`);
     
-    if (similarTickers.length > 0) {
-      console.warn(`❌ Ticker ${ticker} not found. Similar tickers: ${similarTickers.join(', ')}`);
+    // Find all potential matches using multiple strategies
+    const potentialMatches: { key: string; score: number; securityId: string }[] = [];
+    
+    Object.entries(instrumentMap).forEach(([key, securityId]) => {
+      const normalizedKey = key.replace(/[^A-Z0-9]/g, '');
+      let score = 0;
       
-      // Try to find the best match - prioritize exact word matches
-      let bestMatch = similarTickers.find(key => 
-        key.includes(upperTicker) && key.split(' ').includes(upperTicker)
-      );
-      
-      // If no exact word match, use any match that contains the ticker
-      if (!bestMatch) {
-        bestMatch = similarTickers.find(key => key.includes(upperTicker));
+      // Strategy 1: Exact word match (highest priority)
+      if (key.split(' ').includes(upperTicker)) {
+        score = 100;
+      }
+      // Strategy 2: Normalized exact match
+      else if (normalizedKey === normalizedTicker) {
+        score = 90;
+      }
+      // Strategy 3: Ticker is contained in key (normalized)
+      else if (normalizedKey.includes(normalizedTicker)) {
+        score = 80;
+      }
+      // Strategy 4: Key is contained in ticker (normalized)
+      else if (normalizedTicker.includes(normalizedKey)) {
+        score = 70;
+      }
+      // Strategy 5: Regular contains match
+      else if (key.includes(upperTicker)) {
+        score = 60;
+      }
+      // Strategy 6: Reverse contains match
+      else if (upperTicker.includes(key)) {
+        score = 50;
       }
       
-      // If still no match, use the first similar ticker
-      if (!bestMatch) {
-        bestMatch = similarTickers[0];
+      if (score > 0) {
+        potentialMatches.push({ key, score, securityId });
       }
+    });
+    
+    // Sort by score (highest first)
+    potentialMatches.sort((a, b) => b.score - a.score);
+    
+    if (potentialMatches.length > 0) {
+      const bestMatch = potentialMatches[0];
+      console.log(`🎯 Found ${potentialMatches.length} potential matches:`);
+      potentialMatches.slice(0, 5).forEach((match, index) => {
+        console.log(`  ${index + 1}. ${match.key} -> ${match.securityId} (score: ${match.score})`);
+      });
       
-      if (bestMatch) {
-        console.log(`🎯 Using best match: ${bestMatch} -> ${instrumentMap[bestMatch]}`);
-        return instrumentMap[bestMatch];
-      }
+      console.log(`✅ Using best match: ${bestMatch.key} -> Security ID: ${bestMatch.securityId}`);
+      return bestMatch.securityId;
     } else {
       console.warn(`❌ Ticker ${ticker} not found in instrument list`);
       // Show some sample tickers for debugging
