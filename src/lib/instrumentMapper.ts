@@ -2,17 +2,22 @@
 // Maps ticker symbols to Dhan Security IDs
 
 export interface DhanInstrument {
-  SEM_EXM_EXCH_ID: string;        // Exchange ID
-  SEM_SEGMENT: string;            // Segment
-  SM_SYMBOL_NAME: string;         // Symbol name (ticker)
-  SEM_CUSTOM_SYMBOL: string;      // Dhan display symbol
-  SEM_EXCH_INSTRUMENT_TYPE: string; // Instrument type
-  SEM_SERIES: string;             // Series
-  SEM_LOT_UNITS: string;          // Lot size
-  SEM_TICK_SIZE: string;          // Tick size
-  SEM_EXPIRY_DATE?: string;       // Expiry date
-  SEM_STRIKE_PRICE?: string;      // Strike price
-  SEM_OPTION_TYPE?: string;       // Option type
+  EXCH_ID: string;                // Exchange ID
+  SEGMENT: string;                // Segment
+  SECURITY_ID: string;            // Security ID
+  ISIN: string;                   // ISIN
+  INSTRUMENT: string;             // Instrument type
+  UNDERLYING_SECURITY_ID: string; // Underlying Security ID
+  UNDERLYING_SYMBOL: string;      // Underlying Symbol
+  SYMBOL_NAME: string;            // Symbol name (ticker)
+  DISPLAY_NAME: string;           // Display name
+  INSTRUMENT_TYPE: string;        // Instrument type
+  SERIES: string;                 // Series
+  LOT_SIZE: string;               // Lot size
+  SM_EXPIRY_DATE?: string;        // Expiry date
+  STRIKE_PRICE?: string;          // Strike price
+  OPTION_TYPE?: string;           // Option type
+  TICK_SIZE: string;              // Tick size
 }
 
 export interface InstrumentMap {
@@ -96,19 +101,26 @@ function createInstrumentMap(instruments: DhanInstrument[]): InstrumentMap {
   
   instruments.forEach(instrument => {
     // Only include NSE Equity instruments
-    if (instrument.SEM_EXM_EXCH_ID === 'NSE' && 
-        instrument.SEM_SEGMENT === 'E' && 
-        instrument.SEM_EXCH_INSTRUMENT_TYPE === 'EQUITY') {
+    if (instrument.EXCH_ID === 'NSE' && 
+        instrument.SEGMENT === 'E' && 
+        instrument.INSTRUMENT === 'EQUITY') {
       
-      const ticker = instrument.SM_SYMBOL_NAME.toUpperCase();
-      const securityId = instrument.SEM_CUSTOM_SYMBOL || instrument.SM_SYMBOL_NAME;
+      const ticker = instrument.SYMBOL_NAME.toUpperCase();
+      const securityId = instrument.SECURITY_ID;
       
       // Use the ticker as key and security ID as value
-      map[ticker] = securityId.toUpperCase();
+      map[ticker] = securityId;
+      
+      // Also add the display name as a key if it's different
+      if (instrument.DISPLAY_NAME && 
+          instrument.DISPLAY_NAME.toUpperCase() !== ticker) {
+        map[instrument.DISPLAY_NAME.toUpperCase()] = securityId;
+      }
     }
   });
   
   console.log(`Created instrument map with ${Object.keys(map).length} NSE equity instruments`);
+  console.log('Sample mappings:', Object.entries(map).slice(0, 5));
   return map;
 }
 
@@ -134,8 +146,11 @@ export async function mapTickerToSecurityId(ticker: string): Promise<string> {
     const instrumentMap = await getInstrumentCache();
     const upperTicker = ticker.toUpperCase();
     
+    console.log(`Looking for ticker: ${upperTicker}`);
+    console.log(`Total instruments in cache: ${Object.keys(instrumentMap).length}`);
+    
     if (instrumentMap[upperTicker]) {
-      console.log(`Mapped ticker ${ticker} to Security ID: ${instrumentMap[upperTicker]}`);
+      console.log(`✅ Mapped ticker ${ticker} to Security ID: ${instrumentMap[upperTicker]}`);
       return instrumentMap[upperTicker];
     }
     
@@ -145,9 +160,12 @@ export async function mapTickerToSecurityId(ticker: string): Promise<string> {
     );
     
     if (similarTickers.length > 0) {
-      console.warn(`Ticker ${ticker} not found. Similar tickers: ${similarTickers.join(', ')}`);
+      console.warn(`❌ Ticker ${ticker} not found. Similar tickers: ${similarTickers.join(', ')}`);
     } else {
-      console.warn(`Ticker ${ticker} not found in instrument list`);
+      console.warn(`❌ Ticker ${ticker} not found in instrument list`);
+      // Show some sample tickers for debugging
+      const sampleTickers = Object.keys(instrumentMap).slice(0, 10);
+      console.log(`Sample tickers in list: ${sampleTickers.join(', ')}`);
     }
     
     // Fallback to original ticker
