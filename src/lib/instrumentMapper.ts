@@ -171,6 +171,13 @@ async function getInstrumentCache(): Promise<InstrumentMap> {
   return instrumentCache;
 }
 
+// Clear instrument cache to force refresh
+export function clearInstrumentCache(): void {
+  console.log('🧹 Clearing instrument cache to force refresh...');
+  instrumentCache = null;
+  cacheTimestamp = 0;
+}
+
 // Map ticker to Security ID using comprehensive matching logic
 export async function mapTickerToSecurityId(ticker: string): Promise<string> {
   try {
@@ -244,6 +251,16 @@ export async function mapTickerToSecurityId(ticker: string): Promise<string> {
       // Show some sample tickers for debugging
       const sampleTickers = Object.keys(instrumentMap).slice(0, 10);
       console.log(`Sample tickers in list: ${sampleTickers.join(', ')}`);
+      
+      // Log potential similar tickers for debugging
+      const similarTickers = Object.keys(instrumentMap).filter(key => 
+        key.includes(ticker.substring(0, 3)) || 
+        ticker.includes(key.substring(0, 3))
+      ).slice(0, 5);
+      
+      if (similarTickers.length > 0) {
+        console.log(`🔍 Similar tickers found: ${similarTickers.join(', ')}`);
+      }
     }
     
     // Fallback to original ticker
@@ -280,11 +297,4 @@ export async function searchTickers(query: string): Promise<{ ticker: string; se
     console.error('Error searching tickers:', error);
     return [];
   }
-}
-
-// Clear instrument cache (useful for testing)
-export function clearInstrumentCache(): void {
-  instrumentCache = null;
-  cacheTimestamp = 0;
-  console.log('Instrument cache cleared');
 }

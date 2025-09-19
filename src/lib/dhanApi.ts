@@ -77,9 +77,53 @@ function mapSignalToTransactionType(signal: string): 'BUY' | 'SELL' {
   }
 }
 
-// Map ticker to security ID using Dhan's instrument list
+// Map ticker to security ID using Dhan's instrument list with retry mechanism
 async function getSecurityId(ticker: string): Promise<string> {
-  return await mapTickerToSecurityId(ticker);
+  const maxRetries = 3;
+  let lastError: Error | null = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔍 Attempt ${attempt}/${maxRetries} to get SecurityId for ticker: ${ticker}`);
+      
+      const securityId = await mapTickerToSecurityId(ticker);
+      
+      // Check if we got a valid mapping (not just the original ticker)
+      if (securityId && securityId !== ticker.toUpperCase()) {
+        console.log(`✅ Successfully mapped ${ticker} -> ${securityId} on attempt ${attempt}`);
+        return securityId;
+      }
+      
+      // If we got the original ticker back, it means no mapping was found
+      if (attempt < maxRetries) {
+        console.log(`⚠️ No mapping found for ${ticker} on attempt ${attempt}, refreshing cache and retrying...`);
+        
+        // Force refresh the instrument cache by clearing it
+        // This will trigger a fresh fetch from the API
+        const { clearInstrumentCache } = await import('./instrumentMapper');
+        if (clearInstrumentCache) {
+          clearInstrumentCache();
+        }
+        
+        // Add a small delay before retry
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } else {
+        console.error(`❌ Failed to find valid SecurityId for ${ticker} after ${maxRetries} attempts`);
+        throw new Error(`No valid SecurityId mapping found for ticker: ${ticker}`);
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.error(`❌ Attempt ${attempt} failed for ticker ${ticker}:`, lastError.message);
+      
+      if (attempt < maxRetries) {
+        console.log(`🔄 Retrying in 1 second...`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+  }
+  
+  // If we reach here, all attempts failed
+  throw lastError || new Error(`Failed to get SecurityId for ticker: ${ticker} after ${maxRetries} attempts`);
 }
 
 // Place order on Dhan.co with automatic position sizing
@@ -138,8 +182,18 @@ export async function placeDhanOrder(
     console.log('Manual quantity:', quantity);
   }
 
-  // Get proper Security ID from Dhan's instrument list
-  const securityId = await getSecurityId(alert.ticker);
+  // Get proper Security ID from Dhan's instrument list with retry mechanism
+  let securityId: string;
+  try {
+    securityId = await getSecurityId(alert.ticker);
+  } catch (error) {
+    console.error(`❌ Failed to get SecurityId for ${alert.ticker} after retries:`, error);
+    return {
+      success: false,
+      error: `SecurityId mapping failed for ticker ${alert.ticker}: ${error instanceof Error ? error.message : String(error)}`,
+      correlationId: generateCorrelationId()
+    };
+  }
   
   // Determine order type and price
   const orderType = orderConfig?.orderType || DHAN_ORDER_TYPES_ORDER.MARKET;

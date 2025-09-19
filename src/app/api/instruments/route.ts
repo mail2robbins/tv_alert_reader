@@ -47,9 +47,55 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    if (action === 'test-retry' && ticker) {
+      // Test retry mechanism for a specific ticker
+      const { clearInstrumentCache } = await import('@/lib/instrumentMapper');
+      const results = [];
+      
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          console.log(`🧪 Test attempt ${attempt} for ticker: ${ticker}`);
+          clearInstrumentCache(); // Clear cache before each attempt
+          
+          const securityId = await mapTickerToSecurityId(ticker);
+          const isValid = securityId && securityId !== ticker.toUpperCase();
+          
+          results.push({
+            attempt,
+            securityId,
+            isValid,
+            success: isValid
+          });
+          
+          if (isValid) {
+            break; // Stop if we found a valid mapping
+          }
+          
+          // Add delay between attempts
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (error) {
+          results.push({
+            attempt,
+            error: error instanceof Error ? error.message : String(error),
+            success: false
+          });
+        }
+      }
+      
+      return NextResponse.json({
+        success: true,
+        data: {
+          ticker,
+          results,
+          totalAttempts: results.length,
+          successful: results.some(r => r.success)
+        }
+      });
+    }
+
     return NextResponse.json({
       success: false,
-      error: 'Invalid action. Use: map, search, or list'
+      error: 'Invalid action. Use: map, search, list, or test-retry'
     }, { status: 400 });
 
   } catch (error) {
