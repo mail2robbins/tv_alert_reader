@@ -34,7 +34,7 @@ async function fetchInstrumentList(): Promise<DhanInstrument[]> {
   try {
     console.log('Fetching instrument list from Dhan API...');
     
-    const response = await fetch('https://images.dhan.co/api-data/api-scrip-master-detailed.csv');
+    const response = await fetch('https://images.dhan.co/api-data/api-scrip-master.csv');
     
     if (!response.ok) {
       throw new Error(`Failed to fetch instrument list: ${response.status} ${response.statusText}`);
@@ -67,15 +67,32 @@ function parseCSV(csvText: string): DhanInstrument[] {
       continue;
     }
     
-    const instrument: Partial<DhanInstrument> = {};
-    headers.forEach((header, index) => {
-      (instrument as Record<string, string>)[header] = values[index]?.replace(/"/g, '') || '';
-    });
+    // Map the new CSV format to our interface
+    const instrument: DhanInstrument = {
+      EXCH_ID: values[0] || '',                    // SEM_EXM_EXCH_ID
+      SEGMENT: values[1] || '',                    // SEM_SEGMENT
+      SECURITY_ID: values[2] || '',                // SEM_SMST_SECURITY_ID
+      ISIN: '',                                    // Not in this CSV
+      INSTRUMENT: values[3] || '',                 // SEM_INSTRUMENT_NAME
+      UNDERLYING_SECURITY_ID: '',                  // Not in this CSV
+      UNDERLYING_SYMBOL: '',                       // Not in this CSV
+      SYMBOL_NAME: values[5] || '',                // SEM_TRADING_SYMBOL
+      DISPLAY_NAME: values[7] || '',               // SEM_CUSTOM_SYMBOL
+      INSTRUMENT_TYPE: values[13] || '',           // SEM_EXCH_INSTRUMENT_TYPE
+      SERIES: values[14] || '',                    // SEM_SERIES
+      LOT_SIZE: values[6] || '',                   // SEM_LOT_UNITS
+      SM_EXPIRY_DATE: values[8] || undefined,      // SEM_EXPIRY_DATE
+      STRIKE_PRICE: values[9] || undefined,        // SEM_STRIKE_PRICE
+      OPTION_TYPE: values[10] || undefined,        // SEM_OPTION_TYPE
+      TICK_SIZE: values[11] || ''                  // SEM_TICK_SIZE
+    };
     
-    instruments.push(instrument as DhanInstrument);
+    instruments.push(instrument);
     
     // Log specific entries during parsing for debugging
-    if (instrument.SYMBOL_NAME?.toUpperCase().includes('WELENT') || 
+    if (instrument.SYMBOL_NAME?.toUpperCase().includes('EIEL') || 
+        instrument.SYMBOL_NAME?.toUpperCase().includes('USHAMART') ||
+        instrument.SYMBOL_NAME?.toUpperCase().includes('WELENT') || 
         instrument.SYMBOL_NAME?.toUpperCase().includes('VINCOFE') ||
         instrument.SYMBOL_NAME?.toUpperCase().includes('GENUSPOWER') ||
         instrument.SYMBOL_NAME?.toUpperCase().includes('MOBIKWIK')) {
@@ -113,7 +130,7 @@ function parseCSVLine(line: string): string[] {
 // Create ticker to Security ID mapping
 function createInstrumentMap(instruments: DhanInstrument[]): InstrumentMap {
   const map: InstrumentMap = {};
-  const welentEntries: string[] = [];
+  const specialEntries: string[] = [];
   
   instruments.forEach(instrument => {
     // Only include NSE Equity instruments
@@ -125,20 +142,30 @@ function createInstrumentMap(instruments: DhanInstrument[]): InstrumentMap {
       const securityId = instrument.SECURITY_ID;
       const displayName = instrument.DISPLAY_NAME.toUpperCase();
       
-      // Use the ticker as key and security ID as value
-      map[ticker] = securityId;
+      // Clean the ticker - remove leading numbers and spaces
+      const cleanTicker = ticker.replace(/^\d+\s*/, '').trim();
+      
+      // Use the clean ticker as key and security ID as value
+      map[cleanTicker] = securityId;
+      
+      // Also add the original ticker if it's different
+      if (ticker !== cleanTicker) {
+        map[ticker] = securityId;
+      }
       
       // Also add the display name as a key if it's different
-      if (displayName && displayName !== ticker) {
+      if (displayName && displayName !== cleanTicker && displayName !== ticker) {
         map[displayName] = securityId;
       }
       
       // Log specific entries for debugging
-      if (ticker.includes('WELENT') || displayName.includes('WELENT') ||
-          ticker.includes('VINCOFE') || displayName.includes('VINCOFE') ||
-          ticker.includes('GENUSPOWER') || displayName.includes('GENUSPOWER') ||
-          ticker.includes('MOBIKWIK') || displayName.includes('MOBIKWIK')) {
-        welentEntries.push(`${ticker} -> ${securityId} (display: ${displayName})`);
+      if (cleanTicker.includes('EIEL') || displayName.includes('EIEL') ||
+          cleanTicker.includes('USHAMART') || displayName.includes('USHAMART') ||
+          cleanTicker.includes('WELENT') || displayName.includes('WELENT') ||
+          cleanTicker.includes('VINCOFE') || displayName.includes('VINCOFE') ||
+          cleanTicker.includes('GENUSPOWER') || displayName.includes('GENUSPOWER') ||
+          cleanTicker.includes('MOBIKWIK') || displayName.includes('MOBIKWIK')) {
+        specialEntries.push(`${cleanTicker} -> ${securityId} (original: ${ticker}, display: ${displayName})`);
       }
     }
   });
@@ -146,8 +173,8 @@ function createInstrumentMap(instruments: DhanInstrument[]): InstrumentMap {
   console.log(`Created instrument map with ${Object.keys(map).length} NSE equity instruments`);
   console.log('Sample mappings:', Object.entries(map).slice(0, 5));
   
-  if (welentEntries.length > 0) {
-    console.log('Specific entries found:', welentEntries);
+  if (specialEntries.length > 0) {
+    console.log('Specific entries found:', specialEntries);
   } else {
     console.log('No specific entries found in instrument list');
   }

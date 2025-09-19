@@ -93,9 +93,57 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    if (action === 'find-similar' && ticker) {
+      // Find similar tickers for debugging missing mappings
+      const { searchTickers } = await import('@/lib/instrumentMapper');
+      const upperTicker = ticker.toUpperCase();
+      
+      // Try different search strategies
+      const strategies = [
+        { name: 'Exact match', query: upperTicker },
+        { name: 'Partial match', query: upperTicker.substring(0, 3) },
+        { name: 'With LTD', query: `${upperTicker} LTD` },
+        { name: 'With LIMITED', query: `${upperTicker} LIMITED` },
+        { name: 'With CORP', query: `${upperTicker} CORP` },
+        { name: 'With COMPANY', query: `${upperTicker} COMPANY` },
+        { name: 'First 4 chars', query: upperTicker.substring(0, 4) },
+        { name: 'First 5 chars', query: upperTicker.substring(0, 5) }
+      ];
+      
+      const results = [];
+      
+      for (const strategy of strategies) {
+        try {
+          const matches = await searchTickers(strategy.query);
+          results.push({
+            strategy: strategy.name,
+            query: strategy.query,
+            matches: matches.slice(0, 5), // Limit to first 5 matches
+            count: matches.length
+          });
+        } catch (error) {
+          results.push({
+            strategy: strategy.name,
+            query: strategy.query,
+            error: error instanceof Error ? error.message : String(error),
+            count: 0
+          });
+        }
+      }
+      
+      return NextResponse.json({
+        success: true,
+        data: {
+          ticker,
+          searchResults: results,
+          totalStrategies: results.length
+        }
+      });
+    }
+
     return NextResponse.json({
       success: false,
-      error: 'Invalid action. Use: map, search, list, or test-retry'
+      error: 'Invalid action. Use: map, search, list, test-retry, or find-similar'
     }, { status: 400 });
 
   } catch (error) {

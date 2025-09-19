@@ -77,7 +77,87 @@ function mapSignalToTransactionType(signal: string): 'BUY' | 'SELL' {
   }
 }
 
-// Map ticker to security ID using Dhan's instrument list with retry mechanism
+// Manual mapping for known problematic tickers (fallback only)
+const MANUAL_TICKER_MAPPINGS: Record<string, string> = {
+  // These will be populated with actual SecurityIds if needed
+  // 'EIEL': '27213', // Example: from CSV data
+  // 'USHAMART': '8840', // Example: from CSV data
+};
+
+// Enhanced fuzzy matching strategies for ticker mapping
+async function tryAdvancedTickerMatching(ticker: string): Promise<string | null> {
+  const { searchTickers } = await import('./instrumentMapper');
+  const upperTicker = ticker.toUpperCase();
+  
+  console.log(`🔍 Trying advanced matching strategies for: ${ticker}`);
+  
+  // Strategy 0: Check manual mappings first
+  if (MANUAL_TICKER_MAPPINGS[upperTicker]) {
+    console.log(`🎯 Found manual mapping: ${ticker} -> ${MANUAL_TICKER_MAPPINGS[upperTicker]}`);
+    return MANUAL_TICKER_MAPPINGS[upperTicker];
+  }
+  
+  // Strategy 1: Search for partial matches
+  const partialMatches = await searchTickers(upperTicker);
+  if (partialMatches.length > 0) {
+    console.log(`🎯 Found ${partialMatches.length} partial matches:`, partialMatches.slice(0, 3));
+    // Return the first partial match
+    return partialMatches[0].securityId;
+  }
+  
+  // Strategy 2: Try with common suffixes/prefixes
+  const commonVariations = [
+    `${upperTicker} LTD`,
+    `${upperTicker} LIMITED`,
+    `${upperTicker} CORP`,
+    `${upperTicker} CORPORATION`,
+    `${upperTicker} INDUSTRIES`,
+    `${upperTicker} ENTERPRISES`,
+    `${upperTicker} COMPANY`,
+    `${upperTicker} PVT`,
+    `${upperTicker} PRIVATE`,
+    `THE ${upperTicker}`,
+    `${upperTicker} & CO`,
+    `${upperTicker} AND CO`
+  ];
+  
+  for (const variation of commonVariations) {
+    const matches = await searchTickers(variation);
+    if (matches.length > 0) {
+      console.log(`🎯 Found match with variation "${variation}":`, matches[0]);
+      return matches[0].securityId;
+    }
+  }
+  
+  // Strategy 3: Try removing common suffixes from the ticker
+  const cleanTicker = upperTicker
+    .replace(/\s+(LTD|LIMITED|CORP|CORPORATION|INDUSTRIES|ENTERPRISES|COMPANY|PVT|PRIVATE|& CO|AND CO)$/i, '')
+    .trim();
+  
+  if (cleanTicker !== upperTicker) {
+    const cleanMatches = await searchTickers(cleanTicker);
+    if (cleanMatches.length > 0) {
+      console.log(`🎯 Found match with cleaned ticker "${cleanTicker}":`, cleanMatches[0]);
+      return cleanMatches[0].securityId;
+    }
+  }
+  
+  // Strategy 4: Try phonetic/soundex matching (simple version)
+  const tickerWords = upperTicker.split(/\s+/);
+  for (const word of tickerWords) {
+    if (word.length >= 3) {
+      const wordMatches = await searchTickers(word);
+      if (wordMatches.length > 0) {
+        console.log(`🎯 Found match with word "${word}":`, wordMatches[0]);
+        return wordMatches[0].securityId;
+      }
+    }
+  }
+  
+  return null;
+}
+
+// Map ticker to security ID using Dhan's instrument list with enhanced retry mechanism
 async function getSecurityId(ticker: string): Promise<string> {
   const maxRetries = 3;
   let lastError: Error | null = null;
@@ -86,12 +166,21 @@ async function getSecurityId(ticker: string): Promise<string> {
     try {
       console.log(`🔍 Attempt ${attempt}/${maxRetries} to get SecurityId for ticker: ${ticker}`);
       
+      // First try the standard mapping
       const securityId = await mapTickerToSecurityId(ticker);
       
       // Check if we got a valid mapping (not just the original ticker)
       if (securityId && securityId !== ticker.toUpperCase()) {
         console.log(`✅ Successfully mapped ${ticker} -> ${securityId} on attempt ${attempt}`);
         return securityId;
+      }
+      
+      // If standard mapping failed, try advanced matching strategies
+      console.log(`🔍 Standard mapping failed, trying advanced strategies...`);
+      const advancedMatch = await tryAdvancedTickerMatching(ticker);
+      if (advancedMatch) {
+        console.log(`✅ Advanced matching found: ${ticker} -> ${advancedMatch}`);
+        return advancedMatch;
       }
       
       // If we got the original ticker back, it means no mapping was found
