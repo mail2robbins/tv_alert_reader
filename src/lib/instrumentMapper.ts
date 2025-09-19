@@ -29,6 +29,9 @@ let instrumentCache: InstrumentMap | null = null;
 let cacheTimestamp: number = 0;
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
+// Force cache refresh on deployment (environment variable)
+const FORCE_CACHE_REFRESH = process.env.FORCE_INSTRUMENT_CACHE_REFRESH === 'true';
+
 // Fetch instrument list from Dhan API
 async function fetchInstrumentList(): Promise<DhanInstrument[]> {
   try {
@@ -185,6 +188,13 @@ function createInstrumentMap(instruments: DhanInstrument[]): InstrumentMap {
 // Get or refresh instrument cache
 async function getInstrumentCache(): Promise<InstrumentMap> {
   const now = Date.now();
+  
+  // Force refresh if environment variable is set (for deployments)
+  if (FORCE_CACHE_REFRESH) {
+    console.log('🔄 Force cache refresh enabled - clearing cache...');
+    instrumentCache = null;
+    cacheTimestamp = 0;
+  }
   
   if (instrumentCache && (now - cacheTimestamp) < CACHE_DURATION) {
     return instrumentCache;

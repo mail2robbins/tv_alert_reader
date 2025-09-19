@@ -141,9 +141,45 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    if (action === 'force-refresh') {
+      // Force refresh instrument cache (useful for deployments)
+      const { clearInstrumentCache } = await import('@/lib/instrumentMapper');
+      const { mapTickerToSecurityId } = await import('@/lib/instrumentMapper');
+      
+      try {
+        console.log('🔄 Force refreshing instrument cache...');
+        clearInstrumentCache();
+        
+        // Test with a known ticker to verify refresh worked
+        const testTicker = 'HUDCO';
+        const testSecurityId = await mapTickerToSecurityId(testTicker);
+        
+        return NextResponse.json({
+          success: true,
+          data: {
+            message: 'Instrument cache refreshed successfully',
+            environment: process.env.NODE_ENV || 'development',
+            timestamp: new Date().toISOString(),
+            testResult: {
+              ticker: testTicker,
+              securityId: testSecurityId,
+              isValid: testSecurityId && testSecurityId !== testTicker.toUpperCase()
+            }
+          }
+        });
+      } catch (error) {
+        return NextResponse.json({
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+          environment: process.env.NODE_ENV || 'development',
+          timestamp: new Date().toISOString()
+        }, { status: 500 });
+      }
+    }
+
     return NextResponse.json({
       success: false,
-      error: 'Invalid action. Use: map, search, list, test-retry, or find-similar'
+      error: 'Invalid action. Use: map, search, list, test-retry, find-similar, or force-refresh'
     }, { status: 400 });
 
   } catch (error) {

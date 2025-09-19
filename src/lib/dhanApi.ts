@@ -162,6 +162,15 @@ async function getSecurityId(ticker: string): Promise<string> {
   const maxRetries = 3;
   let lastError: Error | null = null;
   
+  // Log deployment environment info
+  const deploymentInfo = {
+    environment: process.env.NODE_ENV || 'development',
+    forceRefresh: process.env.FORCE_INSTRUMENT_CACHE_REFRESH === 'true',
+    timestamp: new Date().toISOString()
+  };
+  
+  console.log(`🚀 SecurityId lookup for ${ticker} in ${deploymentInfo.environment} environment:`, deploymentInfo);
+  
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`🔍 Attempt ${attempt}/${maxRetries} to get SecurityId for ticker: ${ticker}`);
@@ -198,11 +207,13 @@ async function getSecurityId(ticker: string): Promise<string> {
         await new Promise(resolve => setTimeout(resolve, 1000));
       } else {
         console.error(`❌ Failed to find valid SecurityId for ${ticker} after ${maxRetries} attempts`);
-        throw new Error(`No valid SecurityId mapping found for ticker: ${ticker}`);
+        console.error(`❌ Deployment info:`, deploymentInfo);
+        throw new Error(`No valid SecurityId mapping found for ticker: ${ticker} in ${deploymentInfo.environment} environment`);
       }
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       console.error(`❌ Attempt ${attempt} failed for ticker ${ticker}:`, lastError.message);
+      console.error(`❌ Error details:`, { error: lastError.message, stack: lastError.stack, deploymentInfo });
       
       if (attempt < maxRetries) {
         console.log(`🔄 Retrying in 1 second...`);
@@ -212,7 +223,7 @@ async function getSecurityId(ticker: string): Promise<string> {
   }
   
   // If we reach here, all attempts failed
-  throw lastError || new Error(`Failed to get SecurityId for ticker: ${ticker} after ${maxRetries} attempts`);
+  throw lastError || new Error(`Failed to get SecurityId for ticker: ${ticker} after ${maxRetries} attempts in ${deploymentInfo.environment} environment`);
 }
 
 // Place order on Dhan.co with automatic position sizing
