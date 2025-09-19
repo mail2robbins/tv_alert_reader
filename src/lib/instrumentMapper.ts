@@ -51,11 +51,13 @@ async function fetchInstrumentList(): Promise<DhanInstrument[]> {
   }
 }
 
-// Parse CSV data into instrument objects
+// Parse CSV data into instrument objects (filtered for NSE equity only)
 function parseCSV(csvText: string): DhanInstrument[] {
   const lines = csvText.split('\n');
   const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
   const instruments: DhanInstrument[] = [];
+  let totalLines = 0;
+  let filteredLines = 0;
   
   console.log(`Parsing CSV with ${lines.length} lines and ${headers.length} headers`);
   console.log('Headers:', headers.slice(0, 10)); // Show first 10 headers
@@ -64,19 +66,31 @@ function parseCSV(csvText: string): DhanInstrument[] {
     const line = lines[i].trim();
     if (!line) continue;
     
+    totalLines++;
     const values = parseCSVLine(line);
     if (values.length !== headers.length) {
       // Skip malformed lines
       continue;
     }
     
+    // Early filter: Only process NSE equity instruments
+    const exchangeId = values[0] || '';
+    const instrumentName = values[3] || '';
+    const segment = values[1] || '';
+    
+    if (exchangeId !== 'NSE' || instrumentName !== 'EQUITY' || segment !== 'E') {
+      continue; // Skip non-NSE equity instruments
+    }
+    
+    filteredLines++;
+    
     // Map the new CSV format to our interface
     const instrument: DhanInstrument = {
-      EXCH_ID: values[0] || '',                    // SEM_EXM_EXCH_ID
-      SEGMENT: values[1] || '',                    // SEM_SEGMENT
+      EXCH_ID: exchangeId,                         // SEM_EXM_EXCH_ID
+      SEGMENT: segment,                            // SEM_SEGMENT
       SECURITY_ID: values[2] || '',                // SEM_SMST_SECURITY_ID
       ISIN: '',                                    // Not in this CSV
-      INSTRUMENT: values[3] || '',                 // SEM_INSTRUMENT_NAME
+      INSTRUMENT: instrumentName,                  // SEM_INSTRUMENT_NAME
       UNDERLYING_SECURITY_ID: '',                  // Not in this CSV
       UNDERLYING_SYMBOL: '',                       // Not in this CSV
       SYMBOL_NAME: values[5] || '',                // SEM_TRADING_SYMBOL
@@ -98,12 +112,15 @@ function parseCSV(csvText: string): DhanInstrument[] {
         instrument.SYMBOL_NAME?.toUpperCase().includes('WELENT') || 
         instrument.SYMBOL_NAME?.toUpperCase().includes('VINCOFE') ||
         instrument.SYMBOL_NAME?.toUpperCase().includes('GENUSPOWER') ||
-        instrument.SYMBOL_NAME?.toUpperCase().includes('MOBIKWIK')) {
+        instrument.SYMBOL_NAME?.toUpperCase().includes('MOBIKWIK') ||
+        instrument.SYMBOL_NAME?.toUpperCase().includes('HUDCO') ||
+        instrument.SYMBOL_NAME?.toUpperCase().includes('TARIL')) {
       console.log(`Found ${instrument.SYMBOL_NAME} during parsing: ${instrument.SYMBOL_NAME} -> ${instrument.SECURITY_ID}`);
     }
   }
   
-  console.log(`Parsed ${instruments.length} instruments from CSV`);
+  console.log(`Parsed ${instruments.length} NSE equity instruments from ${totalLines} total lines (${filteredLines} NSE equity lines)`);
+  console.log(`Memory optimization: Reduced from ${totalLines} to ${instruments.length} instruments (${((totalLines - instruments.length) / totalLines * 100).toFixed(1)}% reduction)`);
   return instruments;
 }
 
@@ -130,50 +147,47 @@ function parseCSVLine(line: string): string[] {
   return result;
 }
 
-// Create ticker to Security ID mapping
+// Create ticker to Security ID mapping (instruments are already filtered for NSE equity)
 function createInstrumentMap(instruments: DhanInstrument[]): InstrumentMap {
   const map: InstrumentMap = {};
   const specialEntries: string[] = [];
   
   instruments.forEach(instrument => {
-    // Only include NSE Equity instruments
-    if (instrument.EXCH_ID === 'NSE' && 
-        instrument.SEGMENT === 'E' && 
-        instrument.INSTRUMENT === 'EQUITY') {
-      
-      const ticker = instrument.SYMBOL_NAME.toUpperCase();
-      const securityId = instrument.SECURITY_ID;
-      const displayName = instrument.DISPLAY_NAME.toUpperCase();
-      
-      // Clean the ticker - remove leading numbers and spaces
-      const cleanTicker = ticker.replace(/^\d+\s*/, '').trim();
-      
-      // Use the clean ticker as key and security ID as value
-      map[cleanTicker] = securityId;
-      
-      // Also add the original ticker if it's different
-      if (ticker !== cleanTicker) {
-        map[ticker] = securityId;
-      }
-      
-      // Also add the display name as a key if it's different
-      if (displayName && displayName !== cleanTicker && displayName !== ticker) {
-        map[displayName] = securityId;
-      }
-      
-      // Log specific entries for debugging
-      if (cleanTicker.includes('EIEL') || displayName.includes('EIEL') ||
-          cleanTicker.includes('USHAMART') || displayName.includes('USHAMART') ||
-          cleanTicker.includes('WELENT') || displayName.includes('WELENT') ||
-          cleanTicker.includes('VINCOFE') || displayName.includes('VINCOFE') ||
-          cleanTicker.includes('GENUSPOWER') || displayName.includes('GENUSPOWER') ||
-          cleanTicker.includes('MOBIKWIK') || displayName.includes('MOBIKWIK')) {
-        specialEntries.push(`${cleanTicker} -> ${securityId} (original: ${ticker}, display: ${displayName})`);
-      }
+    // Instruments are already filtered for NSE equity during parsing
+    const ticker = instrument.SYMBOL_NAME.toUpperCase();
+    const securityId = instrument.SECURITY_ID;
+    const displayName = instrument.DISPLAY_NAME.toUpperCase();
+    
+    // Clean the ticker - remove leading numbers and spaces
+    const cleanTicker = ticker.replace(/^\d+\s*/, '').trim();
+    
+    // Use the clean ticker as key and security ID as value
+    map[cleanTicker] = securityId;
+    
+    // Also add the original ticker if it's different
+    if (ticker !== cleanTicker) {
+      map[ticker] = securityId;
+    }
+    
+    // Also add the display name as a key if it's different
+    if (displayName && displayName !== cleanTicker && displayName !== ticker) {
+      map[displayName] = securityId;
+    }
+    
+    // Log specific entries for debugging
+    if (cleanTicker.includes('EIEL') || displayName.includes('EIEL') ||
+        cleanTicker.includes('USHAMART') || displayName.includes('USHAMART') ||
+        cleanTicker.includes('WELENT') || displayName.includes('WELENT') ||
+        cleanTicker.includes('VINCOFE') || displayName.includes('VINCOFE') ||
+        cleanTicker.includes('GENUSPOWER') || displayName.includes('GENUSPOWER') ||
+        cleanTicker.includes('MOBIKWIK') || displayName.includes('MOBIKWIK') ||
+        cleanTicker.includes('HUDCO') || displayName.includes('HUDCO') ||
+        cleanTicker.includes('TARIL') || displayName.includes('TARIL')) {
+      specialEntries.push(`${cleanTicker} -> ${securityId} (original: ${ticker}, display: ${displayName})`);
     }
   });
   
-  console.log(`Created instrument map with ${Object.keys(map).length} NSE equity instruments`);
+  console.log(`Created optimized instrument map with ${Object.keys(map).length} NSE equity instruments`);
   console.log('Sample mappings:', Object.entries(map).slice(0, 5));
   
   if (specialEntries.length > 0) {
