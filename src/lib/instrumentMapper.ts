@@ -51,7 +51,7 @@ async function fetchInstrumentList(): Promise<DhanInstrument[]> {
   }
 }
 
-// Parse CSV data into instrument objects (filtered for NSE equity only)
+// Parse CSV data into instrument objects (filtered for NSE equity with EQ series only)
 function parseCSV(csvText: string): DhanInstrument[] {
   const lines = csvText.split('\n');
   const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
@@ -73,13 +73,14 @@ function parseCSV(csvText: string): DhanInstrument[] {
       continue;
     }
     
-    // Early filter: Only process NSE equity instruments
+    // Early filter: Only process NSE equity instruments with EQ series
     const exchangeId = values[0] || '';
     const instrumentName = values[3] || '';
     const segment = values[1] || '';
+    const series = values[14] || '';
     
-    if (exchangeId !== 'NSE' || instrumentName !== 'EQUITY' || segment !== 'E') {
-      continue; // Skip non-NSE equity instruments
+    if (exchangeId !== 'NSE' || instrumentName !== 'EQUITY' || segment !== 'E' || series !== 'EQ') {
+      continue; // Skip non-NSE equity instruments or non-EQ series
     }
     
     filteredLines++;
@@ -119,7 +120,7 @@ function parseCSV(csvText: string): DhanInstrument[] {
     }
   }
   
-  console.log(`Parsed ${instruments.length} NSE equity instruments from ${totalLines} total lines (${filteredLines} NSE equity lines)`);
+  console.log(`Parsed ${instruments.length} NSE equity (EQ series) instruments from ${totalLines} total lines (${filteredLines} NSE equity EQ lines)`);
   console.log(`Memory optimization: Reduced from ${totalLines} to ${instruments.length} instruments (${((totalLines - instruments.length) / totalLines * 100).toFixed(1)}% reduction)`);
   return instruments;
 }
@@ -147,13 +148,13 @@ function parseCSVLine(line: string): string[] {
   return result;
 }
 
-// Create ticker to Security ID mapping (instruments are already filtered for NSE equity)
+// Create ticker to Security ID mapping (instruments are already filtered for NSE equity with EQ series)
 function createInstrumentMap(instruments: DhanInstrument[]): InstrumentMap {
   const map: InstrumentMap = {};
   const specialEntries: string[] = [];
   
   instruments.forEach(instrument => {
-    // Instruments are already filtered for NSE equity during parsing
+    // Instruments are already filtered for NSE equity with EQ series during parsing
     const ticker = instrument.SYMBOL_NAME.toUpperCase();
     const securityId = instrument.SECURITY_ID;
     const displayName = instrument.DISPLAY_NAME.toUpperCase();
@@ -187,7 +188,7 @@ function createInstrumentMap(instruments: DhanInstrument[]): InstrumentMap {
     }
   });
   
-  console.log(`Created optimized instrument map with ${Object.keys(map).length} NSE equity instruments`);
+  console.log(`Created optimized instrument map with ${Object.keys(map).length} NSE equity (EQ series) instruments`);
   console.log('Sample mappings:', Object.entries(map).slice(0, 5));
   
   if (specialEntries.length > 0) {
