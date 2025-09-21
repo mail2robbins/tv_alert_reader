@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTickerCacheStats, getTickerCacheEntry } from '@/lib/orderTracker';
+import { getTickerCacheStats, getTickerCacheEntry, TickerCacheEntry } from '@/lib/orderTracker';
 import { ApiResponse } from '@/types/alert';
 
 export async function GET(request: NextRequest) {
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
             ticker: string;
             date: string;
             hasBeenOrdered: boolean;
-            cacheEntry: any;
+            cacheEntry: TickerCacheEntry | null;
           }>,
           { status: 200 }
         );
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
           ticker: string;
           date: string;
           hasBeenOrdered: boolean;
-          cacheEntry: any;
+          cacheEntry: TickerCacheEntry | null;
         }>,
         { status: 200 }
       );

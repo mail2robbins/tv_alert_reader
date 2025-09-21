@@ -28,7 +28,7 @@ export interface PlacedOrder {
 let memoryOrders: PlacedOrder[] = [];
 
 // Ticker cache to prevent multiple orders for the same ticker on the same day
-interface TickerCacheEntry {
+export interface TickerCacheEntry {
   ticker: string;
   date: string; // YYYY-MM-DD format
   orderCount: number;
