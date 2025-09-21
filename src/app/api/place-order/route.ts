@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { placeDhanOrder } from '@/lib/dhanApi';
-import { storePlacedOrder } from '@/lib/orderTracker';
+import { storePlacedOrder, hasTickerBeenOrderedToday } from '@/lib/orderTracker';
 import { calculatePositionSize } from '@/lib/fundManager';
 import { logError } from '@/lib/fileLogger';
 import { ApiResponse } from '@/types/alert';
@@ -15,6 +15,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Alert is required' } as ApiResponse<null>,
         { status: 400 }
+      );
+    }
+
+    // Check if ticker has already been ordered today
+    if (hasTickerBeenOrderedToday(alert.ticker)) {
+      console.log(`Order blocked: Ticker ${alert.ticker} has already been ordered today`);
+      return NextResponse.json(
+        { success: false, error: `Order blocked: Ticker ${alert.ticker} has already been ordered today` } as ApiResponse<null>,
+        { status: 409 } // Conflict status code
       );
     }
 

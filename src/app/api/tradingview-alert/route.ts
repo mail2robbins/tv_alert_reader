@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { validateTradingViewAlert, validateWebhookSecret } from '@/lib/validation';
 import { logAlert, logError } from '@/lib/fileLogger';
 import { placeDhanOrder } from '@/lib/dhanApi';
-import { storePlacedOrder } from '@/lib/orderTracker';
+import { storePlacedOrder, hasTickerBeenOrderedToday } from '@/lib/orderTracker';
 import { calculatePositionSize } from '@/lib/fundManager';
 import { ApiResponse } from '@/types/alert';
 
@@ -104,39 +104,45 @@ export async function POST(request: NextRequest) {
       try {
         console.log('Auto-placing order for BUY signal:', validation.alert!.ticker);
         
-        // Calculate position size using fund management
-        const positionCalculation = calculatePositionSize(validation.alert!.price);
-        
-        if (!positionCalculation.canPlaceOrder) {
-          console.log('Cannot place order:', positionCalculation.reason);
-          await logError('Order placement blocked', new Error(positionCalculation.reason || 'Unknown reason'));
+        // Check if ticker has already been ordered today
+        if (hasTickerBeenOrderedToday(validation.alert!.ticker)) {
+          console.log(`Order blocked: Ticker ${validation.alert!.ticker} has already been ordered today`);
+          await logError('Order blocked - duplicate ticker', new Error(`Ticker ${validation.alert!.ticker} already ordered today`));
         } else {
-          const dhanResponse = await placeDhanOrder(validation.alert!, {
-            useAutoPositionSizing: true,
-            exchangeSegment: process.env.DHAN_EXCHANGE_SEGMENT || 'NSE_EQ',
-            productType: process.env.DHAN_PRODUCT_TYPE || 'INTRADAY',
-            orderType: process.env.DHAN_ORDER_TYPE || 'MARKET'
-          });
-          
-          const placedOrder = storePlacedOrder(
-            validation.alert!, 
-            alertId, 
-            positionCalculation.finalQuantity, 
-            dhanResponse,
-            positionCalculation
-          );
-          orderResult = { order: placedOrder, dhanResponse, positionCalculation };
-          
-          console.log('Order placed successfully:', {
-            orderId: placedOrder.id,
-            calculatedQuantity: positionCalculation.calculatedQuantity,
-            riskOnCapital: positionCalculation.riskOnCapital,
-            finalQuantity: positionCalculation.finalQuantity,
-            orderValue: positionCalculation.orderValue,
-            positionSize: positionCalculation.positionSizePercentage.toFixed(2) + '%',
-            stopLossPrice: positionCalculation.stopLossPrice?.toFixed(2),
-            targetPrice: positionCalculation.targetPrice?.toFixed(2)
-          });
+          // Calculate position size using fund management
+          const positionCalculation = calculatePositionSize(validation.alert!.price);
+        
+          if (!positionCalculation.canPlaceOrder) {
+            console.log('Cannot place order:', positionCalculation.reason);
+            await logError('Order placement blocked', new Error(positionCalculation.reason || 'Unknown reason'));
+          } else {
+            const dhanResponse = await placeDhanOrder(validation.alert!, {
+              useAutoPositionSizing: true,
+              exchangeSegment: process.env.DHAN_EXCHANGE_SEGMENT || 'NSE_EQ',
+              productType: process.env.DHAN_PRODUCT_TYPE || 'INTRADAY',
+              orderType: process.env.DHAN_ORDER_TYPE || 'MARKET'
+            });
+            
+            const placedOrder = storePlacedOrder(
+              validation.alert!, 
+              alertId, 
+              positionCalculation.finalQuantity, 
+              dhanResponse,
+              positionCalculation
+            );
+            orderResult = { order: placedOrder, dhanResponse, positionCalculation };
+            
+            console.log('Order placed successfully:', {
+              orderId: placedOrder.id,
+              calculatedQuantity: positionCalculation.calculatedQuantity,
+              riskOnCapital: positionCalculation.riskOnCapital,
+              finalQuantity: positionCalculation.finalQuantity,
+              orderValue: positionCalculation.orderValue,
+              positionSize: positionCalculation.positionSizePercentage.toFixed(2) + '%',
+              stopLossPrice: positionCalculation.stopLossPrice?.toFixed(2),
+              targetPrice: positionCalculation.targetPrice?.toFixed(2)
+            });
+          }
         }
       } catch (orderError) {
         console.error('Failed to auto-place order:', orderError);
