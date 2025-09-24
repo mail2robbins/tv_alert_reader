@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateTradingViewAlert, validateWebhookSecret } from '@/lib/validation';
 import { logAlert, logError } from '@/lib/fileLogger';
-import { placeDhanOrder } from '@/lib/dhanApi';
-import { storePlacedOrder, hasTickerBeenOrderedToday } from '@/lib/orderTracker';
-import { calculatePositionSize } from '@/lib/fundManager';
+import { placeDhanOrderOnAllAccounts } from '@/lib/dhanApi';
+import { storeMultiplePlacedOrders, hasTickerBeenOrderedToday, PlacedOrder } from '@/lib/orderTracker';
+import { calculatePositionSizesForAllAccounts } from '@/lib/fundManager';
 import { ApiResponse } from '@/types/alert';
 
 // Rate limiting store (in production, use Redis or similar)
@@ -109,38 +109,46 @@ export async function POST(request: NextRequest) {
           console.log(`Order blocked: Ticker ${validation.alert!.ticker} has already been ordered today`);
           await logError('Order blocked - duplicate ticker', new Error(`Ticker ${validation.alert!.ticker} already ordered today`));
         } else {
-          // Calculate position size using fund management
-          const positionCalculation = calculatePositionSize(validation.alert!.price);
+          // Calculate position sizes for all accounts using multi-account fund management
+          const positionCalculations = calculatePositionSizesForAllAccounts(validation.alert!.price);
+          const validCalculations = positionCalculations.filter(calc => calc.canPlaceOrder);
         
-          if (!positionCalculation.canPlaceOrder) {
-            console.log('Cannot place order:', positionCalculation.reason);
-            await logError('Order placement blocked', new Error(positionCalculation.reason || 'Unknown reason'));
+          if (validCalculations.length === 0) {
+            const reasons = positionCalculations.map(calc => calc.reason).filter(Boolean);
+            console.log('Cannot place order on any account:', reasons);
+            await logError('Order placement blocked on all accounts', new Error(reasons.join('; ') || 'No valid accounts'));
           } else {
-            const dhanResponse = await placeDhanOrder(validation.alert!, {
+            const dhanResponses = await placeDhanOrderOnAllAccounts(validation.alert!, {
               useAutoPositionSizing: true,
               exchangeSegment: process.env.DHAN_EXCHANGE_SEGMENT || 'NSE_EQ',
               productType: process.env.DHAN_PRODUCT_TYPE || 'INTRADAY',
               orderType: process.env.DHAN_ORDER_TYPE || 'MARKET'
             });
             
-            const placedOrder = storePlacedOrder(
+            const placedOrders = storeMultiplePlacedOrders(
               validation.alert!, 
               alertId, 
-              positionCalculation.finalQuantity, 
-              dhanResponse,
-              positionCalculation
+              dhanResponses,
+              positionCalculations
             );
-            orderResult = { order: placedOrder, dhanResponse, positionCalculation };
+            orderResult = { orders: placedOrders, dhanResponses, positionCalculations };
             
-            console.log('Order placed successfully:', {
-              orderId: placedOrder.id,
-              calculatedQuantity: positionCalculation.calculatedQuantity,
-              riskOnCapital: positionCalculation.riskOnCapital,
-              finalQuantity: positionCalculation.finalQuantity,
-              orderValue: positionCalculation.orderValue,
-              positionSize: positionCalculation.positionSizePercentage.toFixed(2) + '%',
-              stopLossPrice: positionCalculation.stopLossPrice?.toFixed(2),
-              targetPrice: positionCalculation.targetPrice?.toFixed(2)
+            const successfulOrders = placedOrders.filter(order => order.status === 'placed');
+            const failedOrders = placedOrders.filter(order => order.status === 'failed');
+            
+            console.log('Multi-account order placement completed:', {
+              totalOrders: placedOrders.length,
+              successfulOrders: successfulOrders.length,
+              failedOrders: failedOrders.length,
+              accountsUsed: validCalculations.length,
+              orders: placedOrders.map(order => ({
+                accountId: order.accountId,
+                clientId: order.clientId,
+                quantity: order.quantity,
+                orderValue: order.orderValue,
+                positionSizePercentage: order.positionSizePercentage,
+                status: order.status
+              }))
             });
           }
         }
@@ -164,13 +172,19 @@ export async function POST(request: NextRequest) {
           alertId, 
           processingTime,
           orderPlaced: !!orderResult,
-          order: orderResult?.order
+          orders: orderResult?.orders || [],
+          totalOrders: orderResult?.orders?.length || 0,
+          successfulOrders: orderResult?.orders?.filter((order: PlacedOrder) => order.status === 'placed').length || 0,
+          failedOrders: orderResult?.orders?.filter((order: PlacedOrder) => order.status === 'failed').length || 0
         }
       } as ApiResponse<{ 
         alertId: string; 
         processingTime: number;
         orderPlaced: boolean;
-        order?: unknown;
+        orders: unknown[];
+        totalOrders: number;
+        successfulOrders: number;
+        failedOrders: number;
       }>,
       { 
         status: 200,
