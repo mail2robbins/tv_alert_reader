@@ -113,6 +113,9 @@ export default function OrdersTable({ orders, isLoading }: OrdersTableProps) {
                 Status
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                Account
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                 Order ID
               </th>
             </tr>
@@ -158,6 +161,14 @@ export default function OrdersTable({ orders, isLoading }: OrdersTableProps) {
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
                     {order.status}
                   </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <div className="flex flex-col">
+                    <span className="font-medium">{order.clientId || 'N/A'}</span>
+                    {order.accountId && (
+                      <span className="text-xs text-gray-500">Account #{order.accountId}</span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {order.orderId || order.correlationId}

@@ -1,6 +1,7 @@
 import { TradingViewAlert } from '@/types/alert';
-import { calculatePositionSize } from './fundManager';
+import { calculatePositionSize, calculatePositionSizeForAccount } from './fundManager';
 import { mapTickerToSecurityId } from './instrumentMapper';
+import { DhanAccountConfig, getActiveAccountConfigurations } from './multiAccountManager';
 
 // Dhan.co API configuration
 const DHAN_API_BASE_URL = 'https://api.dhan.co/v2/super/orders';
@@ -58,6 +59,8 @@ export interface DhanOrderResponse {
   message?: string;
   error?: string;
   correlationId?: string;
+  accountId?: number;
+  clientId?: string;
 }
 
 // Generate correlation ID for order tracking
@@ -226,7 +229,147 @@ async function getSecurityId(ticker: string): Promise<string> {
   throw lastError || new Error(`Failed to get SecurityId for ticker: ${ticker} after ${maxRetries} attempts in ${deploymentInfo.environment} environment`);
 }
 
-// Place order on Dhan.co with automatic position sizing
+// Place order on Dhan.co for a specific account
+export async function placeDhanOrderForAccount(
+  alert: TradingViewAlert,
+  accountConfig: DhanAccountConfig,
+  orderConfig?: {
+    quantity?: number;
+    exchangeSegment?: string;
+    productType?: string;
+    orderType?: string;
+    targetPrice?: number;
+    stopLossPrice?: number;
+    useAutoPositionSizing?: boolean;
+  }
+): Promise<DhanOrderResponse> {
+  // Calculate position size for this specific account
+  let quantity: number;
+  let positionCalculation;
+  
+  if (orderConfig?.useAutoPositionSizing !== false) {
+    // Use automatic position sizing based on account configuration
+    positionCalculation = calculatePositionSizeForAccount(alert.price, accountConfig);
+    
+    if (!positionCalculation.canPlaceOrder) {
+      return {
+        success: false,
+        error: `Cannot place order for account ${accountConfig.clientId}: ${positionCalculation.reason}`,
+        correlationId: generateCorrelationId(),
+        accountId: accountConfig.accountId,
+        clientId: accountConfig.clientId
+      };
+    }
+    
+    quantity = positionCalculation.finalQuantity;
+    console.log(`Auto position sizing for account ${accountConfig.clientId}:`, {
+      stockPrice: alert.price,
+      calculatedQuantity: positionCalculation.calculatedQuantity,
+      riskOnCapital: positionCalculation.riskOnCapital,
+      finalQuantity: quantity,
+      orderValue: positionCalculation.orderValue,
+      leveragedValue: positionCalculation.leveragedValue,
+      positionSizePercentage: positionCalculation.positionSizePercentage.toFixed(2) + '%',
+      stopLossPrice: positionCalculation.stopLossPrice?.toFixed(2),
+      targetPrice: positionCalculation.targetPrice?.toFixed(2)
+    });
+  } else {
+    // Use manual quantity
+    quantity = orderConfig?.quantity || 1;
+    console.log(`Manual quantity for account ${accountConfig.clientId}:`, quantity);
+  }
+
+  // Get proper Security ID from Dhan's instrument list with retry mechanism
+  let securityId: string;
+  try {
+    securityId = await getSecurityId(alert.ticker);
+  } catch (error) {
+    console.error(`❌ Failed to get SecurityId for ${alert.ticker} after retries:`, error);
+    return {
+      success: false,
+      error: `SecurityId mapping failed for ticker ${alert.ticker}: ${error instanceof Error ? error.message : String(error)}`,
+      correlationId: generateCorrelationId(),
+      accountId: accountConfig.accountId,
+      clientId: accountConfig.clientId
+    };
+  }
+  
+  // Determine order type and price
+  const orderType = orderConfig?.orderType || DHAN_ORDER_TYPES_ORDER.MARKET;
+  const orderPrice = orderType === DHAN_ORDER_TYPES_ORDER.MARKET ? 0 : alert.price;
+  
+  // Prepare order request
+  const orderRequest: DhanOrderRequest = {
+    dhanClientId: accountConfig.clientId,
+    correlationId: generateCorrelationId(),
+    transactionType: mapSignalToTransactionType(alert.signal),
+    exchangeSegment: orderConfig?.exchangeSegment || DHAN_EXCHANGE_SEGMENTS.NSE_EQ,
+    productType: orderConfig?.productType || DHAN_PRODUCT_TYPES.CNC,
+    orderType: orderType,
+    securityId: securityId,
+    quantity: quantity,
+    price: orderPrice,
+    targetPrice: orderConfig?.targetPrice || (positionCalculation?.targetPrice),
+    stopLossPrice: orderConfig?.stopLossPrice || (positionCalculation?.stopLossPrice)
+  };
+
+  try {
+    console.log(`Placing Dhan order for account ${accountConfig.clientId}:`, {
+      ticker: alert.ticker,
+      securityId: securityId,
+      signal: alert.signal,
+      orderType: orderType,
+      price: orderPrice,
+      originalPrice: alert.price,
+      quantity: quantity,
+      correlationId: orderRequest.correlationId
+    });
+
+    const response = await fetch(DHAN_API_BASE_URL, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'access-token': accountConfig.accessToken
+      },
+      body: JSON.stringify(orderRequest)
+    });
+
+    const responseData = await response.json();
+
+    if (response.ok) {
+      console.log(`Dhan order placed successfully for account ${accountConfig.clientId}:`, responseData);
+      return {
+        success: true,
+        orderId: responseData.orderId || responseData.correlationId,
+        message: 'Order placed successfully',
+        correlationId: orderRequest.correlationId,
+        accountId: accountConfig.accountId,
+        clientId: accountConfig.clientId
+      };
+    } else {
+      console.error(`Dhan order failed for account ${accountConfig.clientId}:`, responseData);
+      return {
+        success: false,
+        error: responseData.message || responseData.error || 'Order placement failed',
+        correlationId: orderRequest.correlationId,
+        accountId: accountConfig.accountId,
+        clientId: accountConfig.clientId
+      };
+    }
+  } catch (error) {
+    console.error(`Dhan API error for account ${accountConfig.clientId}:`, error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      correlationId: orderRequest.correlationId,
+      accountId: accountConfig.accountId,
+      clientId: accountConfig.clientId
+    };
+  }
+}
+
+// Place order on Dhan.co with automatic position sizing (legacy function for backward compatibility)
 export async function placeDhanOrder(
   alert: TradingViewAlert,
   orderConfig?: {
@@ -362,6 +505,60 @@ export async function placeDhanOrder(
       correlationId: orderRequest.correlationId
     };
   }
+}
+
+// Place order on all active Dhan accounts
+export async function placeDhanOrderOnAllAccounts(
+  alert: TradingViewAlert,
+  orderConfig?: {
+    quantity?: number;
+    exchangeSegment?: string;
+    productType?: string;
+    orderType?: string;
+    targetPrice?: number;
+    stopLossPrice?: number;
+    useAutoPositionSizing?: boolean;
+  }
+): Promise<DhanOrderResponse[]> {
+  const activeAccounts = getActiveAccountConfigurations();
+  
+  if (activeAccounts.length === 0) {
+    throw new Error('No active Dhan accounts configured');
+  }
+  
+  console.log(`Placing orders on ${activeAccounts.length} active accounts for ticker: ${alert.ticker}`);
+  
+  // Place orders on all accounts in parallel
+  const orderPromises = activeAccounts.map(accountConfig => 
+    placeDhanOrderForAccount(alert, accountConfig, orderConfig)
+  );
+  
+  const results = await Promise.allSettled(orderPromises);
+  
+  const responses: DhanOrderResponse[] = [];
+  
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      responses.push(result.value);
+    } else {
+      const accountConfig = activeAccounts[index];
+      console.error(`Order failed for account ${accountConfig.clientId}:`, result.reason);
+      responses.push({
+        success: false,
+        error: `Order placement failed: ${result.reason}`,
+        correlationId: generateCorrelationId(),
+        accountId: accountConfig.accountId,
+        clientId: accountConfig.clientId
+      });
+    }
+  });
+  
+  const successfulOrders = responses.filter(r => r.success).length;
+  const failedOrders = responses.filter(r => !r.success).length;
+  
+  console.log(`Order placement summary: ${successfulOrders} successful, ${failedOrders} failed`);
+  
+  return responses;
 }
 
 // Get order status (if Dhan provides this endpoint)

@@ -22,6 +22,8 @@ export interface PlacedOrder {
   positionSizePercentage: number;
   stopLossPrice?: number;
   targetPrice?: number;
+  accountId?: number;
+  clientId?: string;
 }
 
 // In-memory order storage for serverless environments
@@ -146,7 +148,9 @@ export function storePlacedOrder(
     leveragedValue,
     positionSizePercentage,
     stopLossPrice,
-    targetPrice
+    targetPrice,
+    accountId: dhanResponse.accountId,
+    clientId: dhanResponse.clientId
   };
 
   memoryOrders.push(order);
@@ -163,6 +167,26 @@ export function storePlacedOrder(
 
   console.log('Order stored:', order);
   return order;
+}
+
+// Store multiple placed orders (for multi-account support)
+export function storeMultiplePlacedOrders(
+  alert: TradingViewAlert,
+  alertId: string,
+  dhanResponses: DhanOrderResponse[],
+  positionCalculations?: PositionCalculation[]
+): PlacedOrder[] {
+  const orders: PlacedOrder[] = [];
+  
+  dhanResponses.forEach((dhanResponse, index) => {
+    const positionCalculation = positionCalculations?.[index];
+    const quantity = positionCalculation?.finalQuantity || 1;
+    
+    const order = storePlacedOrder(alert, alertId, quantity, dhanResponse, positionCalculation);
+    orders.push(order);
+  });
+  
+  return orders;
 }
 
 // Get all placed orders

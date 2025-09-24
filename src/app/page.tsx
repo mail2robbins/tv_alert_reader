@@ -9,6 +9,7 @@ import StatsCard from '@/components/StatsCard';
 import OrdersTable from '@/components/OrdersTable';
 import OrderStatsCard from '@/components/OrderStatsCard';
 import FundManager from '@/components/FundManager';
+import AccountConfigCard from '@/components/AccountConfigCard';
 import { PlacedOrder } from '@/lib/orderTracker';
 
 interface Stats {
@@ -300,6 +301,11 @@ export default function Home() {
             </button>
           </div>
           <AlertTable alerts={alerts} isLoading={isLoading} />
+        </div>
+
+        {/* Account Configuration Section */}
+        <div className="mt-8">
+          <AccountConfigCard />
         </div>
 
         {/* Fund Management Section */}

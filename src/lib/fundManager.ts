@@ -1,5 +1,7 @@
 // Fund management and position sizing calculations
 
+import { DhanAccountConfig, getActiveAccountConfigurations } from './multiAccountManager';
+
 export interface FundConfig {
   availableFunds: number;        // Total available funds (e.g., 20000)
   leverage: number;              // Leverage multiplier (e.g., 2x)
@@ -26,6 +28,8 @@ export interface PositionCalculation {
   reason?: string;
   stopLossPrice?: number;
   targetPrice?: number;
+  accountId?: number;             // Account ID for multi-account support
+  clientId?: string;              // Client ID for multi-account support
 }
 
 // Default fund configuration
@@ -136,6 +140,44 @@ export function calculatePositionSize(
     stopLossPrice,
     targetPrice
   };
+}
+
+// Calculate position size for a specific account
+export function calculatePositionSizeForAccount(
+  stockPrice: number,
+  accountConfig: DhanAccountConfig
+): PositionCalculation {
+  const fundConfig: FundConfig = {
+    availableFunds: accountConfig.availableFunds,
+    leverage: accountConfig.leverage,
+    maxPositionSize: accountConfig.maxPositionSize,
+    minOrderValue: accountConfig.minOrderValue,
+    maxOrderValue: accountConfig.maxOrderValue,
+    stopLossPercentage: accountConfig.stopLossPercentage,
+    targetPricePercentage: accountConfig.targetPricePercentage,
+    riskOnCapital: accountConfig.riskOnCapital
+  };
+  
+  const calculation = calculatePositionSize(stockPrice, fundConfig);
+  
+  // Add account information to the calculation
+  return {
+    ...calculation,
+    accountId: accountConfig.accountId,
+    clientId: accountConfig.clientId
+  };
+}
+
+// Calculate position sizes for all active accounts
+export function calculatePositionSizesForAllAccounts(
+  stockPrice: number
+): Array<PositionCalculation & { accountConfig: DhanAccountConfig }> {
+  const activeAccounts: DhanAccountConfig[] = getActiveAccountConfigurations();
+  
+  return activeAccounts.map((accountConfig: DhanAccountConfig) => ({
+    ...calculatePositionSizeForAccount(stockPrice, accountConfig),
+    accountConfig
+  }));
 }
 
 // Calculate multiple position sizes for different scenarios
