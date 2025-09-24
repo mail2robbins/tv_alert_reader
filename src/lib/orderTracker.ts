@@ -179,7 +179,12 @@ export function storeMultiplePlacedOrders(
   const orders: PlacedOrder[] = [];
   
   dhanResponses.forEach((dhanResponse, index) => {
-    const positionCalculation = positionCalculations?.[index];
+    // Find matching position calculation by account ID
+    const positionCalculation = positionCalculations?.find(calc => 
+      calc.accountId === dhanResponse.accountId && 
+      calc.clientId === dhanResponse.clientId
+    ) || positionCalculations?.[index]; // Fallback to index-based matching
+    
     const quantity = positionCalculation?.finalQuantity || 1;
     
     const order = storePlacedOrder(alert, alertId, quantity, dhanResponse, positionCalculation);

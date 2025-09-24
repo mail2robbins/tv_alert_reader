@@ -54,12 +54,12 @@ export async function POST(request: NextRequest) {
           stopLossPrice: orderConfig?.stopLossPrice
         });
 
-        // Store all orders
+        // Store all orders with all position calculations (including failed ones)
         const placedOrders = storeMultiplePlacedOrders(
           alert, 
           alert.id || 'unknown', 
           dhanResponses, 
-          validCalculations
+          positionCalculations
         );
 
         const successfulOrders = placedOrders.filter(order => order.status === 'placed');

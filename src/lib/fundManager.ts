@@ -66,8 +66,9 @@ export function calculatePositionSize(
   // The quantity should use the full capital amount, not leveraged amount
   const calculatedQuantity = Math.floor(config.availableFunds / stockPrice);
   
-  // Apply risk on capital multiplier to get final quantity
-  const finalQuantity = Math.floor(calculatedQuantity * config.riskOnCapital);
+  // Apply risk on capital multiplier to get final quantity (cap at 100% to prevent exceeding available capital)
+  const cappedRiskOnCapital = Math.min(config.riskOnCapital, 1.0);
+  const finalQuantity = Math.floor(calculatedQuantity * cappedRiskOnCapital);
   
   // Calculate actual order value (total value of stocks bought) using final quantity
   const orderValue = finalQuantity * stockPrice;

@@ -56,10 +56,31 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
       setIsLoading(true);
       setError(null);
       
-      const response = await fetch('/api/account-config?includeSummary=true');
+      // Add cache-busting parameter to force fresh data
+      const timestamp = new Date().getTime();
+      const response = await fetch(`/api/account-config?includeSummary=true&t=${timestamp}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       const data = await response.json();
       
       if (data.success) {
+        console.log('Account config loaded:', data.data.config);
+        console.log('Account details:', data.data.config.accounts.map((acc: DhanAccountConfig) => ({
+          id: acc.accountId,
+          clientId: acc.clientId,
+          availableFunds: acc.availableFunds,
+          leverage: acc.leverage,
+          maxPositionSize: acc.maxPositionSize,
+          riskOnCapital: acc.riskOnCapital,
+          minOrderValue: acc.minOrderValue,
+          maxOrderValue: acc.maxOrderValue,
+          stopLossPercentage: acc.stopLossPercentage,
+          targetPricePercentage: acc.targetPricePercentage
+        })));
         setConfig(data.data.config);
         setSummary(data.data.summary);
       } else {
@@ -134,10 +155,36 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
   return (
     <div className={`bg-white rounded-lg shadow overflow-hidden ${className}`}>
       <div className="px-6 py-4 border-b border-gray-200">
-        <h3 className="text-lg font-medium text-gray-900">Account Configuration</h3>
-        <p className="mt-1 text-sm text-gray-500">
-          {summary.activeAccounts} of {summary.totalAccounts} accounts active
-        </p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900">Account Configuration</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              {summary.activeAccounts} of {summary.totalAccounts} accounts active
+            </p>
+          </div>
+          <button
+            onClick={fetchAccountConfig}
+            disabled={isLoading}
+            className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+          >
+            {isLoading ? (
+              <>
+                <svg className="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Loading...
+              </>
+            ) : (
+              <>
+                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh
+              </>
+            )}
+          </button>
+        </div>
       </div>
       
       <div className="p-6">
@@ -192,37 +239,37 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
               </div>
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <div className="text-gray-500">Available Funds</div>
-                  <div className="font-medium">₹{account.availableFunds.toLocaleString()}</div>
+                <div className="bg-white p-3 rounded border">
+                  <div className="text-gray-500 text-xs">Available Funds</div>
+                  <div className="font-bold text-lg text-gray-900">₹{(account.availableFunds || 0).toLocaleString()}</div>
                 </div>
-                <div>
-                  <div className="text-gray-500">Leverage</div>
-                  <div className="font-medium">{account.leverage}x</div>
+                <div className="bg-white p-3 rounded border">
+                  <div className="text-gray-500 text-xs">Leverage</div>
+                  <div className="font-bold text-lg text-gray-900">{(account.leverage || 0)}x</div>
                 </div>
-                <div>
-                  <div className="text-gray-500">Max Position</div>
-                  <div className="font-medium">{(account.maxPositionSize * 100).toFixed(1)}%</div>
+                <div className="bg-white p-3 rounded border">
+                  <div className="text-gray-500 text-xs">Max Position</div>
+                  <div className="font-bold text-lg text-gray-900">{((account.maxPositionSize || 0) * 100).toFixed(1)}%</div>
                 </div>
-                <div>
-                  <div className="text-gray-500">Risk on Capital</div>
-                  <div className="font-medium">{(account.riskOnCapital * 100).toFixed(0)}%</div>
+                <div className="bg-white p-3 rounded border">
+                  <div className="text-gray-500 text-xs">Risk on Capital</div>
+                  <div className="font-bold text-lg text-gray-900">{((account.riskOnCapital || 0) * 100).toFixed(0)}%</div>
                 </div>
-                <div>
-                  <div className="text-gray-500">Min Order Value</div>
-                  <div className="font-medium">₹{account.minOrderValue.toLocaleString()}</div>
+                <div className="bg-white p-3 rounded border">
+                  <div className="text-gray-500 text-xs">Min Order Value</div>
+                  <div className="font-bold text-lg text-gray-900">₹{(account.minOrderValue || 0).toLocaleString()}</div>
                 </div>
-                <div>
-                  <div className="text-gray-500">Max Order Value</div>
-                  <div className="font-medium">₹{account.maxOrderValue.toLocaleString()}</div>
+                <div className="bg-white p-3 rounded border">
+                  <div className="text-gray-500 text-xs">Max Order Value</div>
+                  <div className="font-bold text-lg text-gray-900">₹{(account.maxOrderValue || 0).toLocaleString()}</div>
                 </div>
-                <div>
-                  <div className="text-gray-500">Stop Loss</div>
-                  <div className="font-medium">{(account.stopLossPercentage * 100).toFixed(1)}%</div>
+                <div className="bg-white p-3 rounded border">
+                  <div className="text-gray-500 text-xs">Stop Loss</div>
+                  <div className="font-bold text-lg text-gray-900">{((account.stopLossPercentage || 0) * 100).toFixed(2)}%</div>
                 </div>
-                <div>
-                  <div className="text-gray-500">Target Price</div>
-                  <div className="font-medium">{(account.targetPricePercentage * 100).toFixed(1)}%</div>
+                <div className="bg-white p-3 rounded border">
+                  <div className="text-gray-500 text-xs">Target Price</div>
+                  <div className="font-bold text-lg text-gray-900">{((account.targetPricePercentage || 0) * 100).toFixed(2)}%</div>
                 </div>
               </div>
             </div>
