@@ -1,6 +1,6 @@
 // Fund management and position sizing calculations
 
-import { DhanAccountConfig, getActiveAccountConfigurations } from './multiAccountManager';
+import { DhanAccountConfig, getActiveAccountConfigurations, getAccountConfiguration } from './multiAccountManager';
 
 export interface FundConfig {
   availableFunds: number;        // Total available funds (e.g., 20000)
@@ -44,13 +44,53 @@ const DEFAULT_FUND_CONFIG: FundConfig = {
   riskOnCapital: parseFloat(process.env.RISK_ON_CAPITAL || '1.0')     // 100% of calculated quantity (no multiplier)
 };
 
-// Get current fund configuration
+// Get current fund configuration from main account (DHAN_CLIENT_ID_1)
 export function getFundConfig(): FundConfig {
+  // Try to get the main account configuration first
+  const mainAccount = getAccountConfiguration(1);
+  
+  if (mainAccount) {
+    // Convert DhanAccountConfig to FundConfig
+    return {
+      availableFunds: mainAccount.availableFunds,
+      leverage: mainAccount.leverage,
+      maxPositionSize: mainAccount.maxPositionSize,
+      minOrderValue: mainAccount.minOrderValue,
+      maxOrderValue: mainAccount.maxOrderValue,
+      stopLossPercentage: mainAccount.stopLossPercentage,
+      targetPricePercentage: mainAccount.targetPricePercentage,
+      riskOnCapital: mainAccount.riskOnCapital
+    };
+  }
+  
+  // Fallback to default configuration if main account not found
   return { ...DEFAULT_FUND_CONFIG };
 }
 
-// Update fund configuration
+// Update fund configuration (updates the main account configuration)
 export function updateFundConfig(newConfig: Partial<FundConfig>): FundConfig {
+  // Get the current main account configuration
+  const mainAccount = getAccountConfiguration(1);
+  
+  if (mainAccount) {
+    // Update the main account configuration in memory
+    // Note: This doesn't persist to environment variables, only updates runtime config
+    Object.assign(mainAccount, newConfig);
+    
+    // Return the updated configuration as FundConfig
+    return {
+      availableFunds: mainAccount.availableFunds,
+      leverage: mainAccount.leverage,
+      maxPositionSize: mainAccount.maxPositionSize,
+      minOrderValue: mainAccount.minOrderValue,
+      maxOrderValue: mainAccount.maxOrderValue,
+      stopLossPercentage: mainAccount.stopLossPercentage,
+      targetPricePercentage: mainAccount.targetPricePercentage,
+      riskOnCapital: mainAccount.riskOnCapital
+    };
+  }
+  
+  // Fallback to updating default config if main account not found
   Object.assign(DEFAULT_FUND_CONFIG, newConfig);
   return { ...DEFAULT_FUND_CONFIG };
 }
