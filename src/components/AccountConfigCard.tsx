@@ -238,6 +238,14 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
                 </div>
               </div>
               
+              {/* Access Token Display */}
+              <div className="mb-3 p-2 bg-gray-100 rounded border">
+                <div className="text-xs text-gray-500 mb-1">DHAN_ACCESS_TOKEN</div>
+                <div className="text-sm font-mono text-gray-700 break-all">
+                  {account.accessToken || 'Not configured'}
+                </div>
+              </div>
+              
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div className="bg-white p-3 rounded border">
                   <div className="text-gray-500 text-xs">Available Funds</div>
