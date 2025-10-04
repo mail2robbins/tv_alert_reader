@@ -599,3 +599,291 @@ export async function getDhanOrderStatus(correlationId: string): Promise<unknown
     throw error;
   }
 }
+
+// Dhan order details interface
+export interface DhanOrderDetails {
+  orderId: string;
+  dhanClientId: string;
+  correlationId: string;
+  transactionType: string;
+  exchangeSegment: string;
+  productType: string;
+  orderType: string;
+  securityId: string;
+  quantity: number;
+  price: number;
+  averagePrice?: number;
+  filledQuantity?: number;
+  status: string;
+  targetPrice?: number;
+  stopLossPrice?: number;
+  trailingJump?: number;
+  orderTime?: string;
+  updateTime?: string;
+}
+
+// Get order details by order ID
+export async function getDhanOrderDetails(orderId: string, accessToken: string): Promise<DhanOrderDetails> {
+  try {
+    const response = await fetch(`https://api.dhan.co/v2/orders/${orderId}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'access-token': accessToken
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return data;
+    } else {
+      throw new Error(`Failed to fetch order details: ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error('Error fetching order details:', error);
+    throw error;
+  }
+}
+
+// Update target price for an order
+export async function updateDhanOrderTargetPrice(
+  orderId: string, 
+  dhanClientId: string, 
+  targetPrice: number, 
+  accessToken: string
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const requestBody = {
+      dhanClientId,
+      orderId,
+      legName: "TARGET_LEG",
+      targetPrice
+    };
+
+    const response = await fetch(`https://api.dhan.co/v2/super/orders/${orderId}`, {
+      method: 'PUT',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'access-token': accessToken
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return { success: true, message: 'Target price updated successfully' };
+    } else {
+      const errorData = await response.json();
+      return { 
+        success: false, 
+        error: errorData.message || errorData.error || `Failed to update target price: ${response.statusText}` 
+      };
+    }
+  } catch (error) {
+    console.error('Error updating target price:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error occurred' 
+    };
+  }
+}
+
+// Update stop loss price for an order
+export async function updateDhanOrderStopLoss(
+  orderId: string, 
+  dhanClientId: string, 
+  stopLossPrice: number, 
+  accessToken: string,
+  trailingJump?: number
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const requestBody: any = {
+      dhanClientId,
+      orderId,
+      legName: "STOP_LOSS_LEG",
+      stopLossPrice
+    };
+
+    // Only add trailingJump if provided
+    if (trailingJump && trailingJump > 0) {
+      requestBody.trailingJump = trailingJump;
+    }
+
+    const response = await fetch(`https://api.dhan.co/v2/super/orders/${orderId}`, {
+      method: 'PUT',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'access-token': accessToken
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return { success: true, message: 'Stop loss updated successfully' };
+    } else {
+      const errorData = await response.json();
+      return { 
+        success: false, 
+        error: errorData.message || errorData.error || `Failed to update stop loss: ${response.statusText}` 
+      };
+    }
+  } catch (error) {
+    console.error('Error updating stop loss:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error occurred' 
+    };
+  }
+}
+
+// Rebase TP and SL based on actual entry price
+export async function rebaseOrderTpAndSl(
+  orderId: string,
+  accountConfig: DhanAccountConfig,
+  originalAlertPrice: number
+): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+  rebasedData?: {
+    originalTp?: number;
+    originalSl?: number;
+    newTp?: number;
+    newSl?: number;
+    actualEntryPrice?: number;
+  };
+}> {
+  try {
+    console.log(`🔄 Starting TP/SL rebase for order ${orderId} on account ${accountConfig.clientId}`);
+    
+    // Get order details to find actual entry price
+    const orderDetails = await getDhanOrderDetails(orderId, accountConfig.accessToken);
+    
+    if (!orderDetails) {
+      return { success: false, error: 'Failed to fetch order details' };
+    }
+
+    // Use averagePrice if available, otherwise use price
+    const actualEntryPrice = orderDetails.averagePrice || orderDetails.price;
+    
+    if (!actualEntryPrice || actualEntryPrice <= 0) {
+      return { success: false, error: 'Invalid entry price from order details' };
+    }
+
+    console.log(`📊 Order details:`, {
+      orderId,
+      originalAlertPrice,
+      actualEntryPrice,
+      orderType: orderDetails.orderType,
+      status: orderDetails.status
+    });
+
+    // Only rebase if the entry price is significantly different from alert price
+    const priceDifference = Math.abs(actualEntryPrice - originalAlertPrice);
+    const priceDifferencePercentage = (priceDifference / originalAlertPrice) * 100;
+    
+    // Only rebase if price difference is more than 0.5%
+    if (priceDifferencePercentage < 0.5) {
+      console.log(`✅ Price difference (${priceDifferencePercentage.toFixed(2)}%) is minimal, skipping rebase`);
+      return { 
+        success: true, 
+        message: 'Price difference minimal, no rebase needed',
+        rebasedData: {
+          actualEntryPrice,
+          originalTp: orderDetails.targetPrice,
+          originalSl: orderDetails.stopLossPrice
+        }
+      };
+    }
+
+    // Calculate new TP and SL based on actual entry price
+    const newTargetPrice = actualEntryPrice * (1 + accountConfig.targetPricePercentage);
+    const newStopLossPrice = actualEntryPrice * (1 - accountConfig.stopLossPercentage);
+
+    console.log(`🎯 Recalculating TP/SL:`, {
+      originalAlertPrice,
+      actualEntryPrice,
+      priceDifferencePercentage: priceDifferencePercentage.toFixed(2) + '%',
+      originalTp: orderDetails.targetPrice,
+      originalSl: orderDetails.stopLossPrice,
+      newTp: newTargetPrice.toFixed(2),
+      newSl: newStopLossPrice.toFixed(2)
+    });
+
+    const rebaseResults = {
+      originalTp: orderDetails.targetPrice,
+      originalSl: orderDetails.stopLossPrice,
+      newTp: newTargetPrice,
+      newSl: newStopLossPrice,
+      actualEntryPrice
+    };
+
+    // Update target price
+    let tpUpdateResult = null;
+    if (orderDetails.targetPrice) {
+      tpUpdateResult = await updateDhanOrderTargetPrice(
+        orderId,
+        accountConfig.clientId,
+        newTargetPrice,
+        accountConfig.accessToken
+      );
+      
+      if (!tpUpdateResult.success) {
+        console.error(`❌ Failed to update target price: ${tpUpdateResult.error}`);
+      } else {
+        console.log(`✅ Target price updated successfully: ₹${newTargetPrice.toFixed(2)}`);
+      }
+    }
+
+    // Update stop loss price
+    let slUpdateResult = null;
+    if (orderDetails.stopLossPrice) {
+      slUpdateResult = await updateDhanOrderStopLoss(
+        orderId,
+        accountConfig.clientId,
+        newStopLossPrice,
+        accountConfig.accessToken,
+        accountConfig.enableTrailingStopLoss ? accountConfig.minTrailJump : undefined
+      );
+      
+      if (!slUpdateResult.success) {
+        console.error(`❌ Failed to update stop loss: ${slUpdateResult.error}`);
+      } else {
+        console.log(`✅ Stop loss updated successfully: ₹${newStopLossPrice.toFixed(2)}`);
+      }
+    }
+
+    // Check if both updates were successful
+    const tpSuccess = !orderDetails.targetPrice || tpUpdateResult?.success;
+    const slSuccess = !orderDetails.stopLossPrice || slUpdateResult?.success;
+
+    if (tpSuccess && slSuccess) {
+      console.log(`🎉 TP/SL rebase completed successfully for order ${orderId}`);
+      return {
+        success: true,
+        message: 'TP/SL rebased successfully based on actual entry price',
+        rebasedData: rebaseResults
+      };
+    } else {
+      const errors = [];
+      if (!tpSuccess) errors.push(`TP update failed: ${tpUpdateResult?.error}`);
+      if (!slSuccess) errors.push(`SL update failed: ${slUpdateResult?.error}`);
+      
+      return {
+        success: false,
+        error: `Partial rebase failure: ${errors.join(', ')}`,
+        rebasedData: rebaseResults
+      };
+    }
+
+  } catch (error) {
+    console.error(`❌ Error during TP/SL rebase for order ${orderId}:`, error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error during rebase'
+    };
+  }
+}

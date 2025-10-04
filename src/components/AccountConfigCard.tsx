@@ -17,6 +17,7 @@ interface DhanAccountConfig {
   isActive: boolean;
   enableTrailingStopLoss: boolean;
   minTrailJump: number;
+  rebaseTpAndSl: boolean;
 }
 
 interface MultiAccountConfig {
@@ -248,7 +249,7 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm">
                 <div className="bg-white p-3 rounded border">
                   <div className="text-gray-500 text-xs">Available Funds</div>
                   <div className="font-bold text-lg text-gray-900">₹{(account.availableFunds || 0).toLocaleString()}</div>
@@ -294,6 +295,16 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
                 <div className="bg-white p-3 rounded border">
                   <div className="text-gray-500 text-xs">Min Trail Jump</div>
                   <div className="font-bold text-lg text-gray-900">₹{(account.minTrailJump || 0).toFixed(2)}</div>
+                </div>
+                <div className="bg-white p-3 rounded border">
+                  <div className="text-gray-500 text-xs">Rebase TP/SL</div>
+                  <div className="font-bold text-lg text-gray-900">
+                    {account.rebaseTpAndSl ? (
+                      <span className="text-blue-600">Enabled</span>
+                    ) : (
+                      <span className="text-gray-600">Disabled</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

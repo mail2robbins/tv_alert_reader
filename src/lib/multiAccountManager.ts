@@ -15,6 +15,7 @@ export interface DhanAccountConfig {
   isActive: boolean;
   enableTrailingStopLoss: boolean;
   minTrailJump: number;
+  rebaseTpAndSl: boolean;
 }
 
 export interface MultiAccountConfig {
@@ -47,7 +48,8 @@ export function loadAccountConfigurations(): MultiAccountConfig {
         riskOnCapital: parseFloat(process.env[`RISK_ON_CAPITAL_${i}`] || '1.0'),
         isActive: true,
         enableTrailingStopLoss: process.env[`ENABLE_TRAILING_STOP_LOSS_${i}`] === 'true',
-        minTrailJump: parseFloat(process.env[`MIN_TRAIL_JUMP_${i}`] || '0.05')
+        minTrailJump: parseFloat(process.env[`MIN_TRAIL_JUMP_${i}`] || '0.05'),
+        rebaseTpAndSl: process.env[`REBASE_TP_AND_SL_${i}`] === 'true'
       };
       
       accounts.push(account);
@@ -74,7 +76,8 @@ export function loadAccountConfigurations(): MultiAccountConfig {
         riskOnCapital: parseFloat(process.env.RISK_ON_CAPITAL || '1.0'),
         isActive: true,
         enableTrailingStopLoss: process.env.ENABLE_TRAILING_STOP_LOSS === 'true',
-        minTrailJump: parseFloat(process.env.MIN_TRAIL_JUMP || '0.05')
+        minTrailJump: parseFloat(process.env.MIN_TRAIL_JUMP || '0.05'),
+        rebaseTpAndSl: process.env.REBASE_TP_AND_SL === 'true'
       };
       
       accounts.push(legacyAccount);
