@@ -51,7 +51,8 @@ export async function POST(request: NextRequest) {
           productType: orderConfig?.productType || 'INTRADAY',
           orderType: orderConfig?.orderType || 'MARKET',
           targetPrice: orderConfig?.targetPrice,
-          stopLossPrice: orderConfig?.stopLossPrice
+          stopLossPrice: orderConfig?.stopLossPrice,
+          trailingJump: orderConfig?.trailingJump
         });
 
         // Store all orders with all position calculations (including failed ones)
@@ -133,7 +134,8 @@ export async function POST(request: NextRequest) {
         productType: orderConfig?.productType || 'INTRADAY',
         orderType: orderConfig?.orderType || 'MARKET',
         targetPrice: orderConfig?.targetPrice,
-        stopLossPrice: orderConfig?.stopLossPrice
+        stopLossPrice: orderConfig?.stopLossPrice,
+        trailingJump: orderConfig?.trailingJump
       });
 
       // Store the order

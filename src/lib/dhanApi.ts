@@ -241,6 +241,7 @@ export async function placeDhanOrderForAccount(
     targetPrice?: number;
     stopLossPrice?: number;
     useAutoPositionSizing?: boolean;
+    trailingJump?: number;
   }
 ): Promise<DhanOrderResponse> {
   // Calculate position size for this specific account
@@ -310,7 +311,8 @@ export async function placeDhanOrderForAccount(
     quantity: quantity,
     price: orderPrice,
     targetPrice: orderConfig?.targetPrice || (positionCalculation?.targetPrice),
-    stopLossPrice: orderConfig?.stopLossPrice || (positionCalculation?.stopLossPrice)
+    stopLossPrice: orderConfig?.stopLossPrice || (positionCalculation?.stopLossPrice),
+    trailingJump: accountConfig.enableTrailingStopLoss ? accountConfig.minTrailJump : 0.00
   };
 
   try {
@@ -380,6 +382,7 @@ export async function placeDhanOrder(
     targetPrice?: number;
     stopLossPrice?: number;
     useAutoPositionSizing?: boolean;
+    trailingJump?: number;
   }
 ): Promise<DhanOrderResponse> {
   // Validate required environment variables
@@ -454,7 +457,8 @@ export async function placeDhanOrder(
     quantity: quantity,
     price: orderPrice,
     targetPrice: orderConfig?.targetPrice || (positionCalculation?.targetPrice),
-    stopLossPrice: orderConfig?.stopLossPrice || (positionCalculation?.stopLossPrice)
+    stopLossPrice: orderConfig?.stopLossPrice || (positionCalculation?.stopLossPrice),
+    trailingJump: orderConfig?.trailingJump
   };
 
   try {
@@ -518,6 +522,7 @@ export async function placeDhanOrderOnAllAccounts(
     targetPrice?: number;
     stopLossPrice?: number;
     useAutoPositionSizing?: boolean;
+    trailingJump?: number;
   }
 ): Promise<DhanOrderResponse[]> {
   const activeAccounts = getActiveAccountConfigurations();

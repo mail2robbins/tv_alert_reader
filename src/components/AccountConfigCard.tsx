@@ -15,6 +15,8 @@ interface DhanAccountConfig {
   targetPricePercentage: number;
   riskOnCapital: number;
   isActive: boolean;
+  enableTrailingStopLoss: boolean;
+  minTrailJump: number;
 }
 
 interface MultiAccountConfig {
@@ -246,7 +248,7 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                 <div className="bg-white p-3 rounded border">
                   <div className="text-gray-500 text-xs">Available Funds</div>
                   <div className="font-bold text-lg text-gray-900">₹{(account.availableFunds || 0).toLocaleString()}</div>
@@ -278,6 +280,20 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
                 <div className="bg-white p-3 rounded border">
                   <div className="text-gray-500 text-xs">Target Price</div>
                   <div className="font-bold text-lg text-gray-900">{((account.targetPricePercentage || 0) * 100).toFixed(2)}%</div>
+                </div>
+                <div className="bg-white p-3 rounded border">
+                  <div className="text-gray-500 text-xs">Trailing Stop Loss</div>
+                  <div className="font-bold text-lg text-gray-900">
+                    {account.enableTrailingStopLoss ? (
+                      <span className="text-green-600">Enabled</span>
+                    ) : (
+                      <span className="text-red-600">Disabled</span>
+                    )}
+                  </div>
+                </div>
+                <div className="bg-white p-3 rounded border">
+                  <div className="text-gray-500 text-xs">Min Trail Jump</div>
+                  <div className="font-bold text-lg text-gray-900">₹{(account.minTrailJump || 0).toFixed(2)}</div>
                 </div>
               </div>
             </div>

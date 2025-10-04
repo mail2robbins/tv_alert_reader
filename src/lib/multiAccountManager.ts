@@ -13,6 +13,8 @@ export interface DhanAccountConfig {
   targetPricePercentage: number;
   riskOnCapital: number;
   isActive: boolean;
+  enableTrailingStopLoss: boolean;
+  minTrailJump: number;
 }
 
 export interface MultiAccountConfig {
@@ -43,7 +45,9 @@ export function loadAccountConfigurations(): MultiAccountConfig {
         stopLossPercentage: parseFloat(process.env[`STOP_LOSS_PERCENTAGE_${i}`] || '0.01'),
         targetPricePercentage: parseFloat(process.env[`TARGET_PRICE_PERCENTAGE_${i}`] || '0.015'),
         riskOnCapital: parseFloat(process.env[`RISK_ON_CAPITAL_${i}`] || '1.0'),
-        isActive: true
+        isActive: true,
+        enableTrailingStopLoss: process.env[`ENABLE_TRAILING_STOP_LOSS_${i}`] === 'true',
+        minTrailJump: parseFloat(process.env[`MIN_TRAIL_JUMP_${i}`] || '0.05')
       };
       
       accounts.push(account);
@@ -68,7 +72,9 @@ export function loadAccountConfigurations(): MultiAccountConfig {
         stopLossPercentage: parseFloat(process.env.STOP_LOSS_PERCENTAGE || '0.01'),
         targetPricePercentage: parseFloat(process.env.TARGET_PRICE_PERCENTAGE || '0.015'),
         riskOnCapital: parseFloat(process.env.RISK_ON_CAPITAL || '1.0'),
-        isActive: true
+        isActive: true,
+        enableTrailingStopLoss: process.env.ENABLE_TRAILING_STOP_LOSS === 'true',
+        minTrailJump: parseFloat(process.env.MIN_TRAIL_JUMP || '0.05')
       };
       
       accounts.push(legacyAccount);
@@ -146,6 +152,15 @@ export function validateAccountConfiguration(account: DhanAccountConfig): {
   
   if (account.riskOnCapital <= 0 || account.riskOnCapital > 5) {
     errors.push(`Account ${account.accountId}: Risk on Capital must be between 0% and 500%`);
+  }
+  
+  if (account.minTrailJump < 0.05 || account.minTrailJump > 10) {
+    errors.push(`Account ${account.accountId}: Minimum Trail Jump must be between ₹0.05 and ₹10`);
+  }
+  
+  // Validate that minTrailJump is a multiple of 0.05
+  if (account.minTrailJump % 0.05 !== 0) {
+    errors.push(`Account ${account.accountId}: Minimum Trail Jump must be a multiple of ₹0.05`);
   }
   
   return {
