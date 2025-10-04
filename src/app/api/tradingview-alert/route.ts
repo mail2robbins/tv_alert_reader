@@ -4,6 +4,7 @@ import { logAlert, logError } from '@/lib/fileLogger';
 import { placeDhanOrderOnAllAccounts } from '@/lib/dhanApi';
 import { storeMultiplePlacedOrders, hasTickerBeenOrderedToday, PlacedOrder } from '@/lib/orderTracker';
 import { calculatePositionSizesForAllAccounts } from '@/lib/fundManager';
+import { forwardAlertToExternalWebhooks } from '@/lib/externalWebhookForwarder';
 import { ApiResponse } from '@/types/alert';
 
 // Rate limiting store (in production, use Redis or similar)
@@ -96,6 +97,23 @@ export async function POST(request: NextRequest) {
     // Log the alert
     const alertId = await logAlert(validation.alert!);
     
+    // Forward alert to external webhooks BEFORE processing orders
+    let forwardingResult = null;
+    try {
+      console.log('Forwarding alert to external webhooks...');
+      forwardingResult = await forwardAlertToExternalWebhooks(payload);
+      
+      console.log('External webhook forwarding completed:', {
+        totalUrls: forwardingResult.totalUrls,
+        successfulForwards: forwardingResult.successfulForwards,
+        failedForwards: forwardingResult.failedForwards
+      });
+    } catch (forwardingError) {
+      console.error('Error forwarding alert to external webhooks:', forwardingError);
+      await logError('Failed to forward alert to external webhooks', forwardingError);
+      // Don't fail the webhook if forwarding fails
+    }
+    
     // Auto-place order if enabled and signal is BUY
     let orderResult = null;
     const autoPlaceOrder = process.env.AUTO_PLACE_ORDER === 'true';
@@ -175,7 +193,13 @@ export async function POST(request: NextRequest) {
           orders: orderResult?.orders || [],
           totalOrders: orderResult?.orders?.length || 0,
           successfulOrders: orderResult?.orders?.filter((order: PlacedOrder) => order.status === 'placed').length || 0,
-          failedOrders: orderResult?.orders?.filter((order: PlacedOrder) => order.status === 'failed').length || 0
+          failedOrders: orderResult?.orders?.filter((order: PlacedOrder) => order.status === 'failed').length || 0,
+          externalWebhooks: forwardingResult ? {
+            totalUrls: forwardingResult.totalUrls,
+            successfulForwards: forwardingResult.successfulForwards,
+            failedForwards: forwardingResult.failedForwards,
+            results: forwardingResult.results
+          } : null
         }
       } as ApiResponse<{ 
         alertId: string; 
@@ -185,6 +209,12 @@ export async function POST(request: NextRequest) {
         totalOrders: number;
         successfulOrders: number;
         failedOrders: number;
+        externalWebhooks: {
+          totalUrls: number;
+          successfulForwards: number;
+          failedForwards: number;
+          results: unknown[];
+        } | null;
       }>,
       { 
         status: 200,

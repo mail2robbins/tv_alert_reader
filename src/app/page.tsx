@@ -10,6 +10,7 @@ import OrdersTable from '@/components/OrdersTable';
 import OrderStatsCard from '@/components/OrderStatsCard';
 import FundManager from '@/components/FundManager';
 import AccountConfigCard from '@/components/AccountConfigCard';
+import ExternalWebhookConfig from '@/components/ExternalWebhookConfig';
 import { PlacedOrder } from '@/lib/orderTracker';
 
 interface Stats {
@@ -407,9 +408,14 @@ export default function Home() {
           <OrdersTable orders={orders} isLoading={isLoadingOrders} />
         </div>
 
+        {/* External Webhook Configuration */}
+        <div className="mt-8">
+          <ExternalWebhookConfig />
+        </div>
+
         {/* Webhook Info */}
         <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-medium text-blue-900 mb-2">Webhook Configuration</h3>
+          <h3 className="text-lg font-medium text-blue-900 mb-2">TradingView Webhook Configuration</h3>
           <p className="text-blue-700 mb-4">
             Configure your TradingView alerts to send data to this webhook endpoint:
           </p>
