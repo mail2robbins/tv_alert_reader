@@ -366,7 +366,7 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4 text-sm">
                 <div>
                   <div className="text-gray-700 font-medium">Base Quantity</div>
-                  <div className="font-semibold text-lg text-gray-900">{positionCalculation.calculatedQuantity}</div>
+                  <div className="font-semibold text-lg text-gray-900">{Math.floor(positionCalculation.finalQuantity / config.riskOnCapital)}</div>
                 </div>
                 <div>
                   <div className="text-gray-700 font-medium">Risk Multiplier</div>
@@ -402,7 +402,7 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
                 <div>
                   <div className="text-gray-700 font-medium">Risk Calculation</div>
                   <div className="font-semibold text-sm text-gray-600">
-                    {positionCalculation.calculatedQuantity} × {config.riskOnCapital} = {positionCalculation.finalQuantity} shares
+                    {Math.floor(positionCalculation.finalQuantity / config.riskOnCapital)} × {config.riskOnCapital} = {positionCalculation.finalQuantity} shares
                   </div>
                 </div>
               </div>
