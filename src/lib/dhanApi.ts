@@ -311,9 +311,13 @@ export async function placeDhanOrderForAccount(
     quantity: quantity,
     price: orderPrice,
     targetPrice: orderConfig?.targetPrice || (positionCalculation?.targetPrice),
-    stopLossPrice: orderConfig?.stopLossPrice || (positionCalculation?.stopLossPrice),
-    trailingJump: accountConfig.enableTrailingStopLoss ? accountConfig.minTrailJump : 0.00
+    stopLossPrice: orderConfig?.stopLossPrice || (positionCalculation?.stopLossPrice)
   };
+
+  // Only add trailingJump if trailing stop loss is enabled
+  if (accountConfig.enableTrailingStopLoss) {
+    orderRequest.trailingJump = accountConfig.minTrailJump;
+  }
 
   try {
     console.log(`Placing Dhan order for account ${accountConfig.clientId}:`, {
@@ -457,9 +461,13 @@ export async function placeDhanOrder(
     quantity: quantity,
     price: orderPrice,
     targetPrice: orderConfig?.targetPrice || (positionCalculation?.targetPrice),
-    stopLossPrice: orderConfig?.stopLossPrice || (positionCalculation?.stopLossPrice),
-    trailingJump: orderConfig?.trailingJump
+    stopLossPrice: orderConfig?.stopLossPrice || (positionCalculation?.stopLossPrice)
   };
+
+  // Only add trailingJump if provided and not zero
+  if (orderConfig?.trailingJump && orderConfig.trailingJump > 0) {
+    orderRequest.trailingJump = orderConfig.trailingJump;
+  }
 
   try {
     console.log('Placing Dhan order:', {

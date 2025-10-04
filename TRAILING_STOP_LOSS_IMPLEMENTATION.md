@@ -27,12 +27,16 @@ This implementation adds trailing stop loss functionality to the TV Alert Reader
 
 ### 3. Order Placement Logic (`src/lib/dhanApi.ts`)
 - Updated `DhanOrderRequest` interface to include `trailingJump?: number`
-- Modified `placeDhanOrderForAccount()` to include trailing jump when account has trailing stop loss enabled:
+- Modified `placeDhanOrderForAccount()` to conditionally include trailing jump:
   ```typescript
-  trailingJump: accountConfig.enableTrailingStopLoss ? accountConfig.minTrailJump : undefined
+  // Only add trailingJump if trailing stop loss is enabled
+  if (accountConfig.enableTrailingStopLoss) {
+    orderRequest.trailingJump = accountConfig.minTrailJump;
+  }
   ```
 - Updated all order placement function signatures to accept `trailingJump` parameter
-- Updated legacy order placement functions for backward compatibility
+- Updated legacy order placement functions to only include `trailingJump` when provided and > 0
+- **Important**: Dhan API rejects orders with `trailingJump: 0.00`, so the parameter is omitted entirely when trailing stop loss is disabled
 
 ### 4. API Route Updates (`src/app/api/place-order/route.ts`)
 - Updated order placement calls to pass through `trailingJump` parameter from order configuration
@@ -69,7 +73,9 @@ MIN_TRAIL_JUMP_3=0.15
 
 1. **Configuration Loading**: The system reads trailing stop loss settings from environment variables for each account
 2. **UI Display**: The Account Details section shows the current trailing stop loss configuration for each account
-3. **Order Placement**: When placing orders, if an account has trailing stop loss enabled, the `trailingJump` value is included in the Dhan API request
+3. **Order Placement**: When placing orders:
+   - If an account has trailing stop loss **enabled**, the `trailingJump` value is included in the Dhan API request
+   - If an account has trailing stop loss **disabled**, the `trailingJump` parameter is **omitted entirely** from the request (to avoid Dhan API rejection)
 4. **Validation**: The system validates that the minimum trail jump is within acceptable limits and is a multiple of ₹0.05
 
 ## Benefits
@@ -92,5 +98,6 @@ To test the implementation:
 ## Notes
 
 - The minimum trail jump must be a multiple of ₹0.05 as per Dhan API requirements
+- **Critical**: Dhan API rejects orders with `trailingJump: 0.00`, so the parameter is completely omitted when trailing stop loss is disabled
 - If trailing stop loss is disabled, no `trailingJump` parameter is sent to the API
 - The implementation maintains backward compatibility with existing configurations
