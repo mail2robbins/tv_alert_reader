@@ -671,7 +671,7 @@ export async function updateDhanOrderTargetPrice(
     });
 
     if (response.ok) {
-      const data = await response.json();
+      await response.json();
       return { success: true, message: 'Target price updated successfully' };
     } else {
       const errorData = await response.json();
@@ -698,7 +698,13 @@ export async function updateDhanOrderStopLoss(
   trailingJump?: number
 ): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    const requestBody: any = {
+    const requestBody: {
+      dhanClientId: string;
+      orderId: string;
+      legName: string;
+      stopLossPrice: number;
+      trailingJump?: number;
+    } = {
       dhanClientId,
       orderId,
       legName: "STOP_LOSS_LEG",
@@ -721,7 +727,7 @@ export async function updateDhanOrderStopLoss(
     });
 
     if (response.ok) {
-      const data = await response.json();
+      await response.json();
       return { success: true, message: 'Stop loss updated successfully' };
     } else {
       const errorData = await response.json();
