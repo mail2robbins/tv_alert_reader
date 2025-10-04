@@ -35,27 +35,9 @@ export default function ExternalWebhookConfig() {
     }
   };
 
-  const maskUrl = (url: string): string => {
-    try {
-      const urlObj = new URL(url);
-      const pathParts = urlObj.pathname.split('/');
-      const lastPart = pathParts[pathParts.length - 1];
-      
-      // Mask sensitive parts of the URL
-      if (urlObj.hostname.includes('discord.com')) {
-        return `${urlObj.protocol}//${urlObj.hostname}/api/webhooks/***/***`;
-      } else if (urlObj.hostname.includes('slack.com')) {
-        return `${urlObj.protocol}//${urlObj.hostname}/services/***/***/***`;
-      } else if (urlObj.hostname.includes('telegram.org')) {
-        return `${urlObj.protocol}//${urlObj.hostname}/bot***/sendMessage`;
-      } else {
-        // For other URLs, mask the last part
-        return url.replace(lastPart, '***');
-      }
-    } catch {
-      // If URL parsing fails, just mask the last part
-      return url.replace(/\/[^\/]+$/, '/***');
-    }
+  const displayUrl = (url: string): string => {
+    // Return the full URL without masking
+    return url;
   };
 
   const getServiceName = (url: string): string => {
@@ -169,8 +151,8 @@ export default function ExternalWebhookConfig() {
                     #{index + 1}
                   </span>
                 </div>
-                <p className="text-sm text-gray-600 font-mono truncate">
-                  {maskUrl(url)}
+                <p className="text-sm text-gray-600 font-mono break-all">
+                  {displayUrl(url)}
                 </p>
               </div>
               <div className="flex-shrink-0">
