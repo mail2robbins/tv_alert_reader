@@ -206,37 +206,9 @@ export function processChartInkAlert(chartInkAlert: ChartInkAlert): ChartInkProc
     const ticker = stocksArray[i].toUpperCase();
     const price = parseFloat(pricesArray[i]);
     
-    // Create a timestamp from the triggered_at field
-    // ChartInk provides time like "2:34 pm", we'll create a proper timestamp
-    const now = new Date();
-    const timeStr = chartInkAlert.triggered_at;
-    
-    // Try to parse the time and create a proper timestamp
-    let timestamp: string;
-    try {
-      // Simple time parsing - this could be enhanced based on ChartInk's actual format
-      const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i);
-      if (timeMatch) {
-        let hours = parseInt(timeMatch[1]);
-        const minutes = parseInt(timeMatch[2]);
-        const period = timeMatch[3].toLowerCase();
-        
-        if (period === 'pm' && hours !== 12) {
-          hours += 12;
-        } else if (period === 'am' && hours === 12) {
-          hours = 0;
-        }
-        
-        const alertDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
-        timestamp = alertDate.toISOString();
-      } else {
-        // Fallback to current time
-        timestamp = now.toISOString();
-      }
-    } catch {
-      // Fallback to current time if parsing fails
-      timestamp = now.toISOString();
-    }
+    // Use the current GMT time when the alert was received
+    // This is more accurate than trying to parse ChartInk's time format
+    const timestamp = new Date().toISOString();
     
     const processedAlert: ChartInkProcessedAlert = {
       ticker,

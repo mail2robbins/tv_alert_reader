@@ -91,7 +91,7 @@ export default function AlertTable({ alerts, isLoading }: AlertTableProps) {
             {alerts.map((alert) => (
               <tr key={alert.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {format(new Date(alert.timestamp), 'MMM dd, yyyy HH:mm:ss')}
+                  {format(new Date(alert.timestamp), 'MMM dd, yyyy HH:mm:ss')} IST
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">
