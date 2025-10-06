@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { validateTradingViewAlert, validateWebhookSecret } from '@/lib/validation';
+import { validateTradingViewAlert, validateChartInkAlert, processChartInkAlert, validateWebhookSecret, getAlertSource } from '@/lib/validation';
 import { logAlert, logError } from '@/lib/fileLogger';
 import { placeDhanOrderOnAllAccounts } from '@/lib/dhanApi';
 import { storeMultiplePlacedOrders, hasTickerBeenOrderedToday, PlacedOrder } from '@/lib/orderTracker';
 import { calculatePositionSizesForAllAccounts } from '@/lib/fundManager';
 import { forwardAlertToExternalWebhooks } from '@/lib/externalWebhookForwarder';
-import { ApiResponse } from '@/types/alert';
+import { ApiResponse, TradingViewAlert, ChartInkAlert, ChartInkProcessedAlert } from '@/types/alert';
 
 // Rate limiting store (in production, use Redis or similar)
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -70,23 +70,52 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate webhook secret
-    if (!validateWebhookSecret(payload.webhook_secret)) {
-      await logError('Invalid webhook secret', new Error(`Invalid secret from IP: ${clientIp}`));
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' } as ApiResponse<null>,
-        { status: 401 }
-      );
+    // Get the configured alert source
+    const alertSource = getAlertSource();
+    console.log(`Processing alert from source: ${alertSource}`);
+
+    // Validate based on alert source
+    let validation: { isValid: boolean; error?: string; alert?: TradingViewAlert | ChartInkAlert };
+    let processedAlerts: (TradingViewAlert | ChartInkProcessedAlert)[] = [];
+    let alertType: 'TradingView' | 'ChartInk' = alertSource;
+
+    if (alertSource === 'ChartInk') {
+      // Validate ChartInk alert (no webhook secret validation)
+      const chartInkValidation = validateChartInkAlert(payload);
+      if (chartInkValidation.isValid && chartInkValidation.alert) {
+        processedAlerts = processChartInkAlert(chartInkValidation.alert);
+        alertType = 'ChartInk';
+        validation = chartInkValidation;
+      } else {
+        validation = chartInkValidation;
+      }
+    } else {
+      // Validate TradingView alert with webhook secret
+      if (!validateWebhookSecret(payload.webhook_secret)) {
+        await logError('Invalid webhook secret', new Error(`Invalid secret from IP: ${clientIp}`));
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized' } as ApiResponse<null>,
+          { status: 401 }
+        );
+      }
+      
+      const tradingViewValidation = validateTradingViewAlert(payload);
+      if (tradingViewValidation.isValid && tradingViewValidation.alert) {
+        processedAlerts = [tradingViewValidation.alert];
+        alertType = 'TradingView';
+        validation = tradingViewValidation;
+      } else {
+        validation = tradingViewValidation;
+      }
     }
 
-    // Validate alert payload
-    const validation = validateTradingViewAlert(payload);
     if (!validation.isValid) {
       await logError('Invalid alert payload', new Error(validation.error || 'Unknown validation error'));
       console.error('Alert validation failed:', {
         error: validation.error,
         payload: JSON.stringify(payload, null, 2),
-        ip: clientIp
+        ip: clientIp,
+        alertSource
       });
       return NextResponse.json(
         { success: false, error: validation.error } as ApiResponse<null>,
@@ -94,8 +123,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Log the alert
-    const alertId = await logAlert(validation.alert!);
+    // Log all processed alerts
+    const alertIds: string[] = [];
+    for (const alert of processedAlerts) {
+      const alertId = await logAlert(alert, alertType);
+      alertIds.push(alertId);
+    }
     
     // Forward alert to external webhooks BEFORE processing orders
     let forwardingResult = null;
@@ -114,86 +147,100 @@ export async function POST(request: NextRequest) {
       // Don't fail the webhook if forwarding fails
     }
     
-    // Auto-place order if enabled and signal is BUY
+    // Auto-place orders if enabled and signal is BUY
     let orderResult = null;
     const autoPlaceOrder = process.env.AUTO_PLACE_ORDER === 'true';
     
-    if (autoPlaceOrder && validation.alert!.signal === 'BUY') {
-      try {
-        console.log('Auto-placing order for BUY signal:', validation.alert!.ticker);
+    if (autoPlaceOrder) {
+      const allOrders: PlacedOrder[] = [];
+      let totalSuccessfulOrders = 0;
+      let totalFailedOrders = 0;
+      
+      for (let i = 0; i < processedAlerts.length; i++) {
+        const alert = processedAlerts[i];
+        const alertId = alertIds[i];
         
-        // Check if ticker has already been ordered today
-        if (hasTickerBeenOrderedToday(validation.alert!.ticker)) {
-          console.log(`Order blocked: Ticker ${validation.alert!.ticker} has already been ordered today`);
-          await logError('Order blocked - duplicate ticker', new Error(`Ticker ${validation.alert!.ticker} already ordered today`));
-        } else {
-          // Calculate position sizes for all accounts using multi-account fund management
-          const positionCalculations = calculatePositionSizesForAllAccounts(validation.alert!.price);
-          const validCalculations = positionCalculations.filter(calc => calc.canPlaceOrder);
-        
-          if (validCalculations.length === 0) {
-            const reasons = positionCalculations.map(calc => calc.reason).filter(Boolean);
-            console.log('Cannot place order on any account:', reasons);
-            await logError('Order placement blocked on all accounts', new Error(reasons.join('; ') || 'No valid accounts'));
-          } else {
-            const dhanResponses = await placeDhanOrderOnAllAccounts(validation.alert!, {
-              useAutoPositionSizing: true,
-              exchangeSegment: process.env.DHAN_EXCHANGE_SEGMENT || 'NSE_EQ',
-              productType: process.env.DHAN_PRODUCT_TYPE || 'INTRADAY',
-              orderType: process.env.DHAN_ORDER_TYPE || 'MARKET'
-            });
+        if (alert.signal === 'BUY') {
+          try {
+            console.log('Auto-placing order for BUY signal:', alert.ticker);
             
-            const placedOrders = storeMultiplePlacedOrders(
-              validation.alert!, 
-              alertId, 
-              dhanResponses,
-              positionCalculations
-            );
-            orderResult = { orders: placedOrders, dhanResponses, positionCalculations };
+            // Check if ticker has already been ordered today
+            if (hasTickerBeenOrderedToday(alert.ticker)) {
+              console.log(`Order blocked: Ticker ${alert.ticker} has already been ordered today`);
+              await logError('Order blocked - duplicate ticker', new Error(`Ticker ${alert.ticker} already ordered today`));
+            } else {
+              // Calculate position sizes for all accounts using multi-account fund management
+              const positionCalculations = calculatePositionSizesForAllAccounts(alert.price);
+              const validCalculations = positionCalculations.filter(calc => calc.canPlaceOrder);
             
-            const successfulOrders = placedOrders.filter(order => order.status === 'placed');
-            const failedOrders = placedOrders.filter(order => order.status === 'failed');
-            
-            console.log('Multi-account order placement completed:', {
-              totalOrders: placedOrders.length,
-              successfulOrders: successfulOrders.length,
-              failedOrders: failedOrders.length,
-              accountsUsed: validCalculations.length,
-              orders: placedOrders.map(order => ({
-                accountId: order.accountId,
-                clientId: order.clientId,
-                quantity: order.quantity,
-                orderValue: order.orderValue,
-                positionSizePercentage: order.positionSizePercentage,
-                status: order.status
-              }))
-            });
+              if (validCalculations.length === 0) {
+                const reasons = positionCalculations.map(calc => calc.reason).filter(Boolean);
+                console.log('Cannot place order on any account:', reasons);
+                await logError('Order placement blocked on all accounts', new Error(reasons.join('; ') || 'No valid accounts'));
+              } else {
+                const dhanResponses = await placeDhanOrderOnAllAccounts(alert, {
+                  useAutoPositionSizing: true,
+                  exchangeSegment: process.env.DHAN_EXCHANGE_SEGMENT || 'NSE_EQ',
+                  productType: process.env.DHAN_PRODUCT_TYPE || 'INTRADAY',
+                  orderType: process.env.DHAN_ORDER_TYPE || 'MARKET'
+                });
+                
+                const placedOrders = storeMultiplePlacedOrders(
+                  alert, 
+                  alertId, 
+                  dhanResponses,
+                  positionCalculations
+                );
+                
+                allOrders.push(...placedOrders);
+                totalSuccessfulOrders += placedOrders.filter(order => order.status === 'placed').length;
+                totalFailedOrders += placedOrders.filter(order => order.status === 'failed').length;
+                
+                console.log('Multi-account order placement completed for', alert.ticker, ':', {
+                  totalOrders: placedOrders.length,
+                  successfulOrders: placedOrders.filter(order => order.status === 'placed').length,
+                  failedOrders: placedOrders.filter(order => order.status === 'failed').length,
+                  accountsUsed: validCalculations.length
+                });
+              }
+            }
+          } catch (orderError) {
+            console.error('Failed to auto-place order for', alert.ticker, ':', orderError);
+            await logError('Failed to auto-place order', orderError);
+            // Don't fail the webhook if order placement fails
           }
         }
-      } catch (orderError) {
-        console.error('Failed to auto-place order:', orderError);
-        await logError('Failed to auto-place order', orderError);
-        // Don't fail the webhook if order placement fails
+      }
+      
+      if (allOrders.length > 0) {
+        orderResult = { 
+          orders: allOrders, 
+          totalSuccessfulOrders, 
+          totalFailedOrders 
+        };
       }
     }
     
     const processingTime = Date.now() - startTime;
     
     // Log successful processing
-    console.log(`Alert processed successfully: ${alertId} (${processingTime}ms)`);
+    console.log(`Alert processed successfully: ${alertIds.join(', ')} (${processingTime}ms)`);
     
     return NextResponse.json(
       { 
         success: true, 
         message: 'Alert received and logged successfully',
         data: { 
-          alertId, 
+          alertIds, 
+          alertType,
+          alertSource,
           processingTime,
+          totalAlerts: processedAlerts.length,
           orderPlaced: !!orderResult,
           orders: orderResult?.orders || [],
           totalOrders: orderResult?.orders?.length || 0,
-          successfulOrders: orderResult?.orders?.filter((order: PlacedOrder) => order.status === 'placed').length || 0,
-          failedOrders: orderResult?.orders?.filter((order: PlacedOrder) => order.status === 'failed').length || 0,
+          successfulOrders: orderResult?.totalSuccessfulOrders || 0,
+          failedOrders: orderResult?.totalFailedOrders || 0,
           externalWebhooks: forwardingResult ? {
             totalUrls: forwardingResult.totalUrls,
             successfulForwards: forwardingResult.successfulForwards,
@@ -202,8 +249,11 @@ export async function POST(request: NextRequest) {
           } : null
         }
       } as ApiResponse<{ 
-        alertId: string; 
+        alertIds: string[]; 
+        alertType: 'TradingView' | 'ChartInk';
+        alertSource: 'TradingView' | 'ChartInk';
         processingTime: number;
+        totalAlerts: number;
         orderPlaced: boolean;
         orders: unknown[];
         totalOrders: number;

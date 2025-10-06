@@ -1,4 +1,4 @@
-import { AlertLogEntry, TradingViewAlert } from '@/types/alert';
+import { AlertLogEntry, TradingViewAlert, ChartInkProcessedAlert } from '@/types/alert';
 
 // In-memory storage for serverless environments
 let memoryAlerts: AlertLogEntry[] = [];
@@ -14,11 +14,12 @@ function formatTimestamp(): string {
 }
 
 // Store alert in memory
-export function storeAlertInMemory(alert: TradingViewAlert): string {
+export function storeAlertInMemory(alert: TradingViewAlert | ChartInkProcessedAlert, alertType: 'TradingView' | 'ChartInk' = 'TradingView'): string {
   const alertEntry: AlertLogEntry = {
     id: generateAlertId(),
     timestamp: formatTimestamp(),
-    data: alert
+    data: alert,
+    alertType
   };
 
   memoryAlerts.push(alertEntry);

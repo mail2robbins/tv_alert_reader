@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { AlertLogEntry, TradingViewAlert } from '@/types/alert';
+import { AlertLogEntry, TradingViewAlert, ChartInkProcessedAlert } from '@/types/alert';
 import { storeAlertInMemory, readAlertsFromMemory, getAlertStatsFromMemory } from './memoryStorage';
 
 // Check if we're in a serverless environment
@@ -30,16 +30,17 @@ function formatTimestamp(): string {
 }
 
 // Log an alert to the file
-export async function logAlert(alert: TradingViewAlert): Promise<string> {
+export async function logAlert(alert: TradingViewAlert | ChartInkProcessedAlert, alertType: 'TradingView' | 'ChartInk' = 'TradingView'): Promise<string> {
   // In serverless environments, use memory storage
   if (isServerless) {
-    return storeAlertInMemory(alert);
+    return storeAlertInMemory(alert, alertType);
   }
 
   const alertEntry: AlertLogEntry = {
     id: generateAlertId(),
     timestamp: formatTimestamp(),
-    data: alert
+    data: alert,
+    alertType
   };
 
   const logLine = `[${alertEntry.timestamp}] ${JSON.stringify(alertEntry)}\n`;

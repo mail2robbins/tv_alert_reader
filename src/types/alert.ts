@@ -8,10 +8,31 @@ export interface TradingViewAlert {
   webhook_secret?: string;
 }
 
+export interface ChartInkAlert {
+  stocks: string;
+  trigger_prices: string;
+  triggered_at: string;
+  scan_name: string;
+  scan_url: string;
+  alert_name: string;
+  webhook_url: string;
+}
+
+export interface ChartInkProcessedAlert {
+  ticker: string;
+  price: number;
+  signal: 'BUY';
+  strategy: string;
+  timestamp: string;
+  custom_note?: string;
+  originalAlert: ChartInkAlert;
+}
+
 export interface AlertLogEntry {
   id: string;
   timestamp: string;
-  data: TradingViewAlert;
+  data: TradingViewAlert | ChartInkProcessedAlert;
+  alertType: 'TradingView' | 'ChartInk';
 }
 
 export interface AlertFilters {
