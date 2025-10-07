@@ -18,6 +18,7 @@ interface DhanAccountConfig {
   enableTrailingStopLoss: boolean;
   minTrailJump: number;
   rebaseTpAndSl: boolean;
+  rebaseThresholdPercentage: number;
 }
 
 interface MultiAccountConfig {
@@ -305,6 +306,10 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
                       <span className="text-gray-600">Disabled</span>
                     )}
                   </div>
+                </div>
+                <div className="bg-white p-3 rounded border">
+                  <div className="text-gray-500 text-xs">Rebase Threshold</div>
+                  <div className="font-bold text-lg text-gray-900">{(account.rebaseThresholdPercentage || 0.1).toFixed(1)}%</div>
                 </div>
               </div>
             </div>

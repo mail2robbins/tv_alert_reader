@@ -791,12 +791,15 @@ export async function rebaseOrderTpAndSl(
     const priceDifference = Math.abs(actualEntryPrice - originalAlertPrice);
     const priceDifferencePercentage = (priceDifference / originalAlertPrice) * 100;
     
-    // Only rebase if price difference is more than 0.5%
-    if (priceDifferencePercentage < 0.5) {
-      console.log(`✅ Price difference (${priceDifferencePercentage.toFixed(2)}%) is minimal, skipping rebase`);
+    // Use account-specific rebase threshold (default 0.1%)
+    const rebaseThreshold = accountConfig.rebaseThresholdPercentage || 0.1;
+    
+    // Only rebase if price difference is more than the configured threshold
+    if (priceDifferencePercentage < rebaseThreshold) {
+      console.log(`✅ Price difference (${priceDifferencePercentage.toFixed(2)}%) is below threshold (${rebaseThreshold}%), skipping rebase`);
       return { 
         success: true, 
-        message: 'Price difference minimal, no rebase needed',
+        message: `Price difference below threshold (${rebaseThreshold}%), no rebase needed`,
         rebasedData: {
           actualEntryPrice,
           originalTp: orderDetails.targetPrice,

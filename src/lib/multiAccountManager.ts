@@ -16,6 +16,7 @@ export interface DhanAccountConfig {
   enableTrailingStopLoss: boolean;
   minTrailJump: number;
   rebaseTpAndSl: boolean;
+  rebaseThresholdPercentage: number;
 }
 
 export interface MultiAccountConfig {
@@ -49,7 +50,8 @@ export function loadAccountConfigurations(): MultiAccountConfig {
         isActive: true,
         enableTrailingStopLoss: process.env[`ENABLE_TRAILING_STOP_LOSS_${i}`] === 'true',
         minTrailJump: parseFloat(process.env[`MIN_TRAIL_JUMP_${i}`] || '0.05'),
-        rebaseTpAndSl: process.env[`REBASE_TP_AND_SL_${i}`] === 'true'
+        rebaseTpAndSl: process.env[`REBASE_TP_AND_SL_${i}`] === 'true',
+        rebaseThresholdPercentage: parseFloat(process.env[`REBASE_THRESHOLD_PERCENTAGE_${i}`] || '0.1')
       };
       
       accounts.push(account);
@@ -77,7 +79,8 @@ export function loadAccountConfigurations(): MultiAccountConfig {
         isActive: true,
         enableTrailingStopLoss: process.env.ENABLE_TRAILING_STOP_LOSS === 'true',
         minTrailJump: parseFloat(process.env.MIN_TRAIL_JUMP || '0.05'),
-        rebaseTpAndSl: process.env.REBASE_TP_AND_SL === 'true'
+        rebaseTpAndSl: process.env.REBASE_TP_AND_SL === 'true',
+        rebaseThresholdPercentage: parseFloat(process.env.REBASE_THRESHOLD_PERCENTAGE || '0.1')
       };
       
       accounts.push(legacyAccount);
