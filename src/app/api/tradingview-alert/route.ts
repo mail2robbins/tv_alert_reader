@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateTradingViewAlert, validateChartInkAlert, processChartInkAlert, validateWebhookSecret, getAlertSource } from '@/lib/validation';
 import { logAlert, logError } from '@/lib/fileLogger';
-import { placeDhanOrderOnAllAccounts } from '@/lib/dhanApi';
+import { placeDhanOrderOnAllAccounts, rebaseOrderTpAndSl } from '@/lib/dhanApi';
 import { storeMultiplePlacedOrders, hasTickerBeenOrderedToday, PlacedOrder } from '@/lib/orderTracker';
 import { calculatePositionSizesForAllAccounts } from '@/lib/fundManager';
 import { forwardAlertToExternalWebhooks } from '@/lib/externalWebhookForwarder';
+import { getAccountConfiguration } from '@/lib/multiAccountManager';
 import { ApiResponse, TradingViewAlert, ChartInkAlert, ChartInkProcessedAlert } from '@/types/alert';
 
 // Rate limiting store (in production, use Redis or similar)
@@ -192,6 +193,50 @@ export async function POST(request: NextRequest) {
                   positionCalculations
                 );
                 
+                // Rebase TP/SL for successful orders if configured
+                const rebaseResults = [];
+                for (const dhanResponse of dhanResponses) {
+                  if (dhanResponse.success && dhanResponse.orderId && dhanResponse.accountId) {
+                    const accountConfig = getAccountConfiguration(dhanResponse.accountId);
+                    if (accountConfig && accountConfig.rebaseTpAndSl) {
+                      console.log(`🔄 Initiating TP/SL rebase for order ${dhanResponse.orderId} on account ${dhanResponse.clientId}`);
+                      
+                      try {
+                        // Add a small delay to ensure order is processed
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        
+                        const rebaseResult = await rebaseOrderTpAndSl(
+                          dhanResponse.orderId,
+                          accountConfig,
+                          alert.price
+                        );
+                        
+                        rebaseResults.push({
+                          orderId: dhanResponse.orderId,
+                          accountId: dhanResponse.accountId,
+                          clientId: dhanResponse.clientId,
+                          ...rebaseResult
+                        });
+                        
+                        if (rebaseResult.success) {
+                          console.log(`✅ TP/SL rebase successful for order ${dhanResponse.orderId}`);
+                        } else {
+                          console.error(`❌ TP/SL rebase failed for order ${dhanResponse.orderId}: ${rebaseResult.error}`);
+                        }
+                      } catch (error) {
+                        console.error(`❌ Error during TP/SL rebase for order ${dhanResponse.orderId}:`, error);
+                        rebaseResults.push({
+                          orderId: dhanResponse.orderId,
+                          accountId: dhanResponse.accountId,
+                          clientId: dhanResponse.clientId,
+                          success: false,
+                          error: error instanceof Error ? error.message : 'Unknown error during rebase'
+                        });
+                      }
+                    }
+                  }
+                }
+                
                 allOrders.push(...placedOrders);
                 totalSuccessfulOrders += placedOrders.filter(order => order.status === 'placed').length;
                 totalFailedOrders += placedOrders.filter(order => order.status === 'failed').length;
@@ -200,7 +245,8 @@ export async function POST(request: NextRequest) {
                   totalOrders: placedOrders.length,
                   successfulOrders: placedOrders.filter(order => order.status === 'placed').length,
                   failedOrders: placedOrders.filter(order => order.status === 'failed').length,
-                  accountsUsed: validCalculations.length
+                  accountsUsed: validCalculations.length,
+                  rebaseResults: rebaseResults.length > 0 ? rebaseResults : undefined
                 });
               }
             }
