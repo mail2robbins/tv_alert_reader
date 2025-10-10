@@ -48,6 +48,7 @@ interface AccountConfigCardProps {
 export default function AccountConfigCard({ className = '' }: AccountConfigCardProps) {
   const [config, setConfig] = useState<MultiAccountConfig | null>(null);
   const [summary, setSummary] = useState<ConfigurationSummary | null>(null);
+  const [alertSource, setAlertSource] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,6 +74,7 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
       
       if (data.success) {
         console.log('Account config loaded:', data.data.config);
+        console.log('Alert source:', data.data.alertSource);
         console.log('Account details:', data.data.config.accounts.map((acc: DhanAccountConfig) => ({
           id: acc.accountId,
           clientId: acc.clientId,
@@ -87,6 +89,7 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
         })));
         setConfig(data.data.config);
         setSummary(data.data.summary);
+        setAlertSource(data.data.alertSource || 'TradingView');
       } else {
         setError(data.error || 'Failed to fetch account configuration');
       }
@@ -214,6 +217,39 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
           </div>
         </div>
 
+        {/* Alert Source Configuration */}
+        <div className="mb-6">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="flex-shrink-0">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4 19h6v-6H4v6zM4 5h6V1H4v4zM15 1h5l-5 5V1z" />
+                    </svg>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900">Alert Source Configuration</h4>
+                  <p className="text-xs text-gray-500">Current alert processing source</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+                  alertSource === 'ChartInk' 
+                    ? 'bg-orange-100 text-orange-800' 
+                    : 'bg-blue-100 text-blue-800'
+                }`}>
+                  {alertSource === 'ChartInk' ? '📊 ChartInk' : '📈 TradingView'}
+                </span>
+                <span className="text-sm text-gray-500 font-mono">
+                  ALERT_SOURCE={alertSource}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Account Details */}
         <div className="space-y-4">
           <h4 className="text-md font-medium text-gray-900">Account Details</h4>
@@ -309,7 +345,7 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
                 </div>
                 <div className="bg-white p-3 rounded border">
                   <div className="text-gray-500 text-xs">Rebase Threshold</div>
-                  <div className="font-bold text-lg text-gray-900">{(account.rebaseThresholdPercentage || 0.1).toFixed(1)}%</div>
+                  <div className="font-bold text-lg text-gray-900">{((account.rebaseThresholdPercentage || 0.1) * 100).toFixed(2)}%</div>
                 </div>
               </div>
             </div>

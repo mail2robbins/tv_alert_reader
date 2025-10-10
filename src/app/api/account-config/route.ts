@@ -4,6 +4,7 @@ import {
   validateAllAccountConfigurations, 
   getConfigurationSummary 
 } from '@/lib/multiAccountManager';
+import { getAlertSource } from '@/lib/validation';
 import { ApiResponse } from '@/types/alert';
 
 export async function GET(request: NextRequest) {
@@ -13,13 +14,16 @@ export async function GET(request: NextRequest) {
     const includeSummary = searchParams.get('includeSummary') === 'true';
 
     const config = loadAccountConfigurations();
+    const alertSource = getAlertSource();
     
     const responseData: {
       config: typeof config;
+      alertSource: string;
       validation?: ReturnType<typeof validateAllAccountConfigurations>;
       summary?: ReturnType<typeof getConfigurationSummary>;
     } = {
-      config
+      config,
+      alertSource
     };
 
     if (includeValidation) {

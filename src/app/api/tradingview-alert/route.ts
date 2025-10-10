@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
                       
                       try {
                         // Add a small delay to ensure order is processed
-                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        await new Promise(resolve => setTimeout(resolve, 1000));
                         
                         const rebaseResult = await rebaseOrderTpAndSl(
                           dhanResponse.orderId,

@@ -765,26 +765,69 @@ export async function rebaseOrderTpAndSl(
   try {
     console.log(`🔄 Starting TP/SL rebase for order ${orderId} on account ${accountConfig.clientId}`);
     
-    // Get order details to find actual entry price
-    const orderDetails = await getDhanOrderDetails(orderId, accountConfig.accessToken);
+    // Retry logic to wait for order execution
+    const maxRetries = 5;
+    const retryDelay = 3000; // 3 seconds between retries
+    let orderDetails: DhanOrderDetails | null = null;
+    let actualEntryPrice: number | null = null;
     
-    if (!orderDetails) {
-      return { success: false, error: 'Failed to fetch order details' };
-    }
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      console.log(`📊 Attempt ${attempt}/${maxRetries} to get order details for ${orderId}`);
+      
+      try {
+        orderDetails = await getDhanOrderDetails(orderId, accountConfig.accessToken);
+        
+        if (!orderDetails) {
+          console.log(`❌ No order details returned on attempt ${attempt}`);
+          if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            continue;
+          }
+          return { success: false, error: 'Failed to fetch order details after all retries' };
+        }
 
-    // Use averagePrice if available, otherwise use price
-    const actualEntryPrice = orderDetails.averagePrice || orderDetails.price;
+        console.log(`📋 Order status: ${orderDetails.status}, Price: ${orderDetails.price}, AveragePrice: ${orderDetails.averagePrice}`);
+        
+        // Use averagePrice if available, otherwise use price
+        actualEntryPrice = orderDetails.averagePrice || orderDetails.price;
+        
+        // Check if we have a valid entry price
+        if (actualEntryPrice && actualEntryPrice > 0) {
+          console.log(`✅ Valid entry price found: ${actualEntryPrice} on attempt ${attempt}`);
+          break;
+        }
+        
+        // If order is still in TRANSIT or doesn't have entry price, wait and retry
+        if (orderDetails.status === 'TRANSIT' || !actualEntryPrice || actualEntryPrice <= 0) {
+          console.log(`⏳ Order still in ${orderDetails.status} status or no entry price, waiting ${retryDelay}ms before retry...`);
+          if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            continue;
+          }
+        }
+      } catch (error) {
+        console.error(`❌ Error fetching order details on attempt ${attempt}:`, error);
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          continue;
+        }
+        throw error;
+      }
+    }
     
     if (!actualEntryPrice || actualEntryPrice <= 0) {
-      return { success: false, error: 'Invalid entry price from order details' };
+      return { 
+        success: false, 
+        error: `Order not executed or no valid entry price after ${maxRetries} attempts. Order status: ${orderDetails?.status || 'unknown'}` 
+      };
     }
 
     console.log(`📊 Order details:`, {
       orderId,
       originalAlertPrice,
       actualEntryPrice,
-      orderType: orderDetails.orderType,
-      status: orderDetails.status
+      orderType: orderDetails?.orderType || 'UNKNOWN',
+      status: orderDetails?.status || 'UNKNOWN'
     });
 
     // Only rebase if the entry price is significantly different from alert price
@@ -802,8 +845,8 @@ export async function rebaseOrderTpAndSl(
         message: `Price difference below threshold (${rebaseThreshold}%), no rebase needed`,
         rebasedData: {
           actualEntryPrice,
-          originalTp: orderDetails.targetPrice,
-          originalSl: orderDetails.stopLossPrice
+          originalTp: orderDetails?.targetPrice,
+          originalSl: orderDetails?.stopLossPrice
         }
       };
     }
@@ -816,15 +859,15 @@ export async function rebaseOrderTpAndSl(
       originalAlertPrice,
       actualEntryPrice,
       priceDifferencePercentage: priceDifferencePercentage.toFixed(2) + '%',
-      originalTp: orderDetails.targetPrice,
-      originalSl: orderDetails.stopLossPrice,
+      originalTp: orderDetails?.targetPrice,
+      originalSl: orderDetails?.stopLossPrice,
       newTp: newTargetPrice.toFixed(2),
       newSl: newStopLossPrice.toFixed(2)
     });
 
     const rebaseResults = {
-      originalTp: orderDetails.targetPrice,
-      originalSl: orderDetails.stopLossPrice,
+      originalTp: orderDetails?.targetPrice,
+      originalSl: orderDetails?.stopLossPrice,
       newTp: newTargetPrice,
       newSl: newStopLossPrice,
       actualEntryPrice
@@ -832,7 +875,7 @@ export async function rebaseOrderTpAndSl(
 
     // Update target price
     let tpUpdateResult = null;
-    if (orderDetails.targetPrice) {
+    if (orderDetails?.targetPrice) {
       tpUpdateResult = await updateDhanOrderTargetPrice(
         orderId,
         accountConfig.clientId,
@@ -849,7 +892,7 @@ export async function rebaseOrderTpAndSl(
 
     // Update stop loss price
     let slUpdateResult = null;
-    if (orderDetails.stopLossPrice) {
+    if (orderDetails?.stopLossPrice) {
       slUpdateResult = await updateDhanOrderStopLoss(
         orderId,
         accountConfig.clientId,
@@ -866,8 +909,8 @@ export async function rebaseOrderTpAndSl(
     }
 
     // Check if both updates were successful
-    const tpSuccess = !orderDetails.targetPrice || tpUpdateResult?.success;
-    const slSuccess = !orderDetails.stopLossPrice || slUpdateResult?.success;
+    const tpSuccess = !orderDetails?.targetPrice || tpUpdateResult?.success;
+    const slSuccess = !orderDetails?.stopLossPrice || slUpdateResult?.success;
 
     if (tpSuccess && slSuccess) {
       console.log(`🎉 TP/SL rebase completed successfully for order ${orderId}`);
