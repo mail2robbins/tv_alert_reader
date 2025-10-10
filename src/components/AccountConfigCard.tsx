@@ -49,6 +49,11 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
   const [config, setConfig] = useState<MultiAccountConfig | null>(null);
   const [summary, setSummary] = useState<ConfigurationSummary | null>(null);
   const [alertSource, setAlertSource] = useState<string>('');
+  const [dhanConfig, setDhanConfig] = useState<{
+    exchangeSegment: string;
+    productType: string;
+    orderType: string;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,6 +80,7 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
       if (data.success) {
         console.log('Account config loaded:', data.data.config);
         console.log('Alert source:', data.data.alertSource);
+        console.log('DHAN config:', data.data.dhanConfig);
         console.log('Account details:', data.data.config.accounts.map((acc: DhanAccountConfig) => ({
           id: acc.accountId,
           clientId: acc.clientId,
@@ -90,6 +96,11 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
         setConfig(data.data.config);
         setSummary(data.data.summary);
         setAlertSource(data.data.alertSource || 'TradingView');
+        setDhanConfig(data.data.dhanConfig || {
+          exchangeSegment: 'NSE_EQ',
+          productType: 'INTRADAY',
+          orderType: 'MARKET'
+        });
       } else {
         setError(data.error || 'Failed to fetch account configuration');
       }
@@ -217,34 +228,99 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
           </div>
         </div>
 
-        {/* Alert Source Configuration */}
+        {/* System Configuration */}
         <div className="mb-6">
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4 19h6v-6H4v6zM4 5h6V1H4v4zM15 1h5l-5 5V1z" />
-                    </svg>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-gray-900">Alert Source Configuration</h4>
-                  <p className="text-xs text-gray-500">Current alert processing source</p>
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
-                  alertSource === 'ChartInk' 
-                    ? 'bg-orange-100 text-orange-800' 
-                    : 'bg-blue-100 text-blue-800'
-                }`}>
-                  {alertSource === 'ChartInk' ? '📊 ChartInk' : '📈 TradingView'}
-                </span>
-                <span className="text-sm text-gray-500 font-mono">
-                  ALERT_SOURCE={alertSource}
-                </span>
+              <div>
+                <h4 className="text-sm font-medium text-gray-900">System Configuration</h4>
+                <p className="text-xs text-gray-500">Alert source and DHAN trading configuration</p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Alert Source */}
+              <div className="bg-white rounded-lg p-3 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Alert Source</div>
+                    <div className="text-sm font-medium text-gray-900">ALERT_SOURCE</div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      alertSource === 'ChartInk' 
+                        ? 'bg-orange-100 text-orange-800' 
+                        : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {alertSource === 'ChartInk' ? '📊 ChartInk' : '📈 TradingView'}
+                    </span>
+                    <span className="text-xs text-gray-500 font-mono">
+                      {alertSource}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* DHAN Exchange Segment */}
+              <div className="bg-white rounded-lg p-3 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Exchange Segment</div>
+                    <div className="text-sm font-medium text-gray-900">DHAN_EXCHANGE_SEGMENT</div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                      📈 {dhanConfig?.exchangeSegment || 'NSE_EQ'}
+                    </span>
+                    <span className="text-xs text-gray-500 font-mono">
+                      {dhanConfig?.exchangeSegment || 'NSE_EQ'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* DHAN Product Type */}
+              <div className="bg-white rounded-lg p-3 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Product Type</div>
+                    <div className="text-sm font-medium text-gray-900">DHAN_PRODUCT_TYPE</div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                      📦 {dhanConfig?.productType || 'INTRADAY'}
+                    </span>
+                    <span className="text-xs text-gray-500 font-mono">
+                      {dhanConfig?.productType || 'INTRADAY'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* DHAN Order Type */}
+              <div className="bg-white rounded-lg p-3 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Order Type</div>
+                    <div className="text-sm font-medium text-gray-900">DHAN_ORDER_TYPE</div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                      ⚡ {dhanConfig?.orderType || 'MARKET'}
+                    </span>
+                    <span className="text-xs text-gray-500 font-mono">
+                      {dhanConfig?.orderType || 'MARKET'}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

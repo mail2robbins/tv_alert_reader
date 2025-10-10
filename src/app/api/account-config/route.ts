@@ -16,14 +16,23 @@ export async function GET(request: NextRequest) {
     const config = loadAccountConfigurations();
     const alertSource = getAlertSource();
     
+    // Get DHAN configuration values
+    const dhanConfig = {
+      exchangeSegment: process.env.DHAN_EXCHANGE_SEGMENT || 'NSE_EQ',
+      productType: process.env.DHAN_PRODUCT_TYPE || 'INTRADAY',
+      orderType: process.env.DHAN_ORDER_TYPE || 'MARKET'
+    };
+    
     const responseData: {
       config: typeof config;
       alertSource: string;
+      dhanConfig: typeof dhanConfig;
       validation?: ReturnType<typeof validateAllAccountConfigurations>;
       summary?: ReturnType<typeof getConfigurationSummary>;
     } = {
       config,
-      alertSource
+      alertSource,
+      dhanConfig
     };
 
     if (includeValidation) {
