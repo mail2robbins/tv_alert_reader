@@ -421,7 +421,7 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
                 </div>
                 <div className="bg-white p-3 rounded border">
                   <div className="text-gray-500 text-xs">Rebase Threshold</div>
-                  <div className="font-bold text-lg text-gray-900">{((account.rebaseThresholdPercentage || 0.1) * 100).toFixed(2)}%</div>
+                  <div className="font-bold text-lg text-gray-900">{(account.rebaseThresholdPercentage || 0.1).toFixed(3)}</div>
                 </div>
               </div>
             </div>
