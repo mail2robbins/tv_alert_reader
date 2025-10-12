@@ -195,10 +195,36 @@ export function validateChartInkAlert(payload: unknown): { isValid: boolean; err
   }
 }
 
+// Extract signal type from ChartInk alert_name
+function extractSignalFromAlertName(alertName: string): 'BUY' | 'SELL' | 'HOLD' {
+  const upperAlertName = alertName.toUpperCase();
+  
+  // Check for SELL signal first (more specific)
+  if (upperAlertName.startsWith('SELL')) {
+    return 'SELL';
+  }
+  
+  // Check for BUY signal
+  if (upperAlertName.startsWith('BUY')) {
+    return 'BUY';
+  }
+  
+  // Check for HOLD signal
+  if (upperAlertName.startsWith('HOLD')) {
+    return 'HOLD';
+  }
+  
+  // Default to BUY if no signal is found
+  return 'BUY';
+}
+
 // Process ChartInk alert into individual alerts for each stock
 export function processChartInkAlert(chartInkAlert: ChartInkAlert): ChartInkProcessedAlert[] {
   const stocksArray = chartInkAlert.stocks.split(',').map(s => s.trim()).filter(Boolean);
   const pricesArray = chartInkAlert.trigger_prices.split(',').map(p => p.trim()).filter(Boolean);
+  
+  // Extract signal from alert_name
+  const signal = extractSignalFromAlertName(chartInkAlert.alert_name);
   
   const processedAlerts: ChartInkProcessedAlert[] = [];
   
@@ -213,10 +239,10 @@ export function processChartInkAlert(chartInkAlert: ChartInkAlert): ChartInkProc
     const processedAlert: ChartInkProcessedAlert = {
       ticker,
       price,
-      signal: 'BUY', // ChartInk alerts are always BUY signals
+      signal, // Extract signal from alert_name
       strategy: chartInkAlert.scan_name,
       timestamp,
-      custom_note: `ChartInk Alert: ${chartInkAlert.alert_name} | Scan: ${chartInkAlert.scan_name}`,
+      custom_note: `ChartInk Alert: ${chartInkAlert.alert_name} | Scan: ${chartInkAlert.scan_name} | Signal: ${signal}`,
       originalAlert: chartInkAlert
     };
     

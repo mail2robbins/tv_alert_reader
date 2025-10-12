@@ -61,7 +61,9 @@ ChartInk sends alerts in the following JSON format:
    - Converts ChartInk time format to ISO timestamp
 
 2. **Order Placement**: If `AUTO_PLACE_ORDER=true`, the application will:
-   - Place BUY orders for each stock in the alert
+   - Extract signal type from the first word of `alert_name` (BUY/SELL/HOLD)
+   - Place BUY or SELL orders based on the extracted signal
+   - Default to BUY orders if no signal is specified
    - Use the same multi-account fund management system
    - Apply the same risk management rules
 
@@ -72,6 +74,40 @@ ChartInk sends alerts in the following JSON format:
 - **No Authentication**: ChartInk alerts do not include webhook secrets, so authentication is skipped when `ALERT_SOURCE=ChartInk`
 - **Rate Limiting**: Still applies to prevent abuse
 - **Validation**: All ChartInk alerts are validated for proper format and data integrity
+
+## Signal Configuration
+
+ChartInk alerts now support BUY and SELL signals by including the signal type as the first word in the `alert_name` field:
+
+### BUY Signal Example
+```json
+{
+  "alert_name": "BUY Alert for Short term breakouts"
+}
+```
+
+### SELL Signal Example
+```json
+{
+  "alert_name": "SELL Alert for Short term breakouts"
+}
+```
+
+### HOLD Signal Example
+```json
+{
+  "alert_name": "HOLD Alert for Wait and watch"
+}
+```
+
+### No Signal (Default to BUY)
+```json
+{
+  "alert_name": "Breakout Alert"
+}
+```
+
+**Note**: Signal extraction is case-insensitive. If no signal is found, the system defaults to BUY orders.
 
 ## Testing
 

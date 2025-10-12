@@ -21,7 +21,7 @@ export interface ChartInkAlert {
 export interface ChartInkProcessedAlert {
   ticker: string;
   price: number;
-  signal: 'BUY';
+  signal: 'BUY' | 'SELL' | 'HOLD';
   strategy: string;
   timestamp: string;
   custom_note?: string;
