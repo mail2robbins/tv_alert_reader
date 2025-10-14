@@ -97,8 +97,10 @@ export default function Home() {
         const data = await response.json();
 
         if (data.success) {
-          setAlerts(data.data.alerts);
-          setStats(data.data.stats);
+          console.log('API Response:', { alertsCount: data.data.alerts.length, stats: data.data.stats });
+          // Force state update by creating new arrays
+          setAlerts([...data.data.alerts]);
+          setStats({ ...data.data.stats });
         } else {
           console.error('Failed to fetch alerts:', data.error);
         }
@@ -131,8 +133,9 @@ export default function Home() {
         const data = await response.json();
 
         if (data.success) {
-          setAlerts(data.data.alerts);
-          setStats(data.data.stats);
+          // Force state update by creating new arrays
+          setAlerts([...data.data.alerts]);
+          setStats({ ...data.data.stats });
         } else {
           console.error('Failed to fetch alerts:', data.error);
         }

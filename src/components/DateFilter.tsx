@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
@@ -14,40 +14,26 @@ interface DateFilterProps {
 }
 
 export default function DateFilter({ onDateChange, onLoadAllData, onLoadData, isLoading, startDate, endDate }: DateFilterProps) {
-  const [localStartDate, setLocalStartDate] = useState<Date | null>(startDate || null);
-  const [localEndDate, setLocalEndDate] = useState<Date | null>(endDate || null);
-
-  // Sync local state with parent state when props change
-  React.useEffect(() => {
-    setLocalStartDate(startDate || null);
-  }, [startDate]);
-
-  React.useEffect(() => {
-    setLocalEndDate(endDate || null);
-  }, [endDate]);
+  // Use parent state directly instead of local state to avoid synchronization issues
+  const localStartDate = startDate;
+  const localEndDate = endDate;
 
   const handleStartDateChange = (date: Date | null) => {
-    setLocalStartDate(date);
-    // Use the current localEndDate value
-    onDateChange(date, localEndDate);
+    // Use the current endDate value from parent state
+    onDateChange(date, endDate || null);
   };
 
   const handleEndDateChange = (date: Date | null) => {
-    setLocalEndDate(date);
-    // Use the current localStartDate value
-    onDateChange(localStartDate, date);
+    // Use the current startDate value from parent state
+    onDateChange(startDate || null, date);
   };
 
   const clearDates = () => {
-    setLocalStartDate(null);
-    setLocalEndDate(null);
     onDateChange(null, null);
   };
 
   const setToday = () => {
     const today = new Date();
-    setLocalStartDate(today);
-    setLocalEndDate(today);
     onDateChange(today, today);
   };
 
@@ -55,8 +41,6 @@ export default function DateFilter({ onDateChange, onLoadAllData, onLoadData, is
     const end = new Date();
     const start = new Date();
     start.setDate(start.getDate() - 7);
-    setLocalStartDate(start);
-    setLocalEndDate(end);
     onDateChange(start, end);
   };
 
@@ -64,8 +48,6 @@ export default function DateFilter({ onDateChange, onLoadAllData, onLoadData, is
     const end = new Date();
     const start = new Date();
     start.setDate(start.getDate() - 30);
-    setLocalStartDate(start);
-    setLocalEndDate(end);
     onDateChange(start, end);
   };
 
