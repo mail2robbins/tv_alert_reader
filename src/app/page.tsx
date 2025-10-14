@@ -64,6 +64,9 @@ export default function Home() {
       strategy: filterInputs.strategy || undefined,
     };
     
+    console.log('Load Data clicked - Current filters:', newFilters);
+    console.log('Load Data clicked - Date range:', { startDate, endDate });
+    
     // Fetch data with filters
     setIsLoading(true);
     const fetchFilteredData = async () => {
@@ -154,6 +157,7 @@ export default function Home() {
     signal: string;
     strategy: string;
   }) => {
+    console.log('Filter inputs changed:', newInputs);
     setFilterInputs(newInputs);
   }, []);
 

@@ -22,27 +22,43 @@ export default function AlertFilters({ onLoadData, isLoading, availableStrategie
     setTicker('');
     setSignal('');
     setStrategy('');
+    
+    // Notify parent component that filters have been cleared
+    if (onFilterInputChange) {
+      onFilterInputChange({
+        ticker: '',
+        signal: '',
+        strategy: '',
+      });
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
+    let newTicker = ticker;
+    let newSignal = signal;
+    let newStrategy = strategy;
+    
     switch (field) {
       case 'ticker':
+        newTicker = value;
         setTicker(value);
         break;
       case 'signal':
+        newSignal = value;
         setSignal(value);
         break;
       case 'strategy':
+        newStrategy = value;
         setStrategy(value);
         break;
     }
     
-    // Notify parent component of filter input changes
+    // Notify parent component of filter input changes with the new values
     if (onFilterInputChange) {
       onFilterInputChange({
-        ticker: field === 'ticker' ? value : ticker,
-        signal: field === 'signal' ? value : signal,
-        strategy: field === 'strategy' ? value : strategy,
+        ticker: newTicker,
+        signal: newSignal,
+        strategy: newStrategy,
       });
     }
   };
