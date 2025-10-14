@@ -1,6 +1,18 @@
 import { TradingViewAlert } from '@/types/alert';
 import { DhanOrderResponse } from './dhanApi';
 import { PositionCalculation } from './fundManager';
+import { isDatabaseAvailable } from './database';
+import { 
+  storePlacedOrderInDatabase, 
+  getAllPlacedOrdersFromDatabase, 
+  getOrdersByTickerFromDatabase, 
+  getOrdersByStatusFromDatabase, 
+  getOrderStatsFromDatabase, 
+  updateOrderStatusInDatabase,
+  hasTickerBeenOrderedTodayInDatabase,
+  addTickerToCacheInDatabase,
+  getTickerCacheStatsFromDatabase
+} from './orderDatabase';
 
 // Order tracking interface
 export interface PlacedOrder {
@@ -26,7 +38,7 @@ export interface PlacedOrder {
   clientId?: string;
 }
 
-// In-memory order storage for serverless environments
+// In-memory order storage for serverless environments (fallback)
 let memoryOrders: PlacedOrder[] = [];
 
 // Ticker cache to prevent multiple orders for the same ticker on the same day
@@ -50,7 +62,16 @@ function getCurrentDateString(): string {
 }
 
 // Check if ticker has already been ordered today
-export function hasTickerBeenOrderedToday(ticker: string): boolean {
+export async function hasTickerBeenOrderedToday(ticker: string): Promise<boolean> {
+  if (await isDatabaseAvailable()) {
+    try {
+      return await hasTickerBeenOrderedTodayInDatabase(ticker);
+    } catch (error) {
+      console.error('Failed to check ticker cache in database, falling back to memory:', error);
+    }
+  }
+
+  // Fallback to memory storage
   const today = getCurrentDateString();
   const cacheEntry = tickerCache.find(entry => 
     entry.ticker.toUpperCase() === ticker.toUpperCase() && 
@@ -60,7 +81,17 @@ export function hasTickerBeenOrderedToday(ticker: string): boolean {
 }
 
 // Add ticker to cache for today
-export function addTickerToCache(ticker: string): void {
+export async function addTickerToCache(ticker: string): Promise<void> {
+  if (await isDatabaseAvailable()) {
+    try {
+      await addTickerToCacheInDatabase(ticker);
+      return;
+    } catch (error) {
+      console.error('Failed to add ticker to cache in database, falling back to memory:', error);
+    }
+  }
+
+  // Fallback to memory storage
   const today = getCurrentDateString();
   const now = new Date().toISOString();
   
@@ -92,11 +123,20 @@ export function addTickerToCache(ticker: string): void {
 }
 
 // Get ticker cache statistics
-export function getTickerCacheStats(): {
+export async function getTickerCacheStats(): Promise<{
   totalEntries: number;
   todayEntries: number;
   tickersOrderedToday: string[];
-} {
+}> {
+  if (await isDatabaseAvailable()) {
+    try {
+      return await getTickerCacheStatsFromDatabase();
+    } catch (error) {
+      console.error('Failed to get ticker cache stats from database, falling back to memory:', error);
+    }
+  }
+
+  // Fallback to memory storage
   const today = getCurrentDateString();
   const todayEntries = tickerCache.filter(entry => entry.date === today);
   
@@ -117,13 +157,13 @@ export function getTickerCacheEntry(ticker: string, date?: string): TickerCacheE
 }
 
 // Store placed order
-export function storePlacedOrder(
+export async function storePlacedOrder(
   alert: TradingViewAlert,
   alertId: string,
   quantity: number,
   dhanResponse: DhanOrderResponse,
   positionCalculation?: PositionCalculation
-): PlacedOrder {
+): Promise<PlacedOrder> {
   const orderValue = alert.price * quantity;
   const leveragedValue = positionCalculation?.leveragedValue || (orderValue / 2); // Default to 2x leverage
   const positionSizePercentage = positionCalculation?.positionSizePercentage || 0;
@@ -153,14 +193,24 @@ export function storePlacedOrder(
     clientId: dhanResponse.clientId
   };
 
-  memoryOrders.push(order);
+  // Store in database if available
+  if (await isDatabaseAvailable()) {
+    try {
+      await storePlacedOrderInDatabase(order);
+    } catch (error) {
+      console.error('Failed to store order in database, falling back to memory:', error);
+      memoryOrders.push(order);
+    }
+  } else {
+    memoryOrders.push(order);
+  }
   
   // Add ticker to cache if order was successfully placed
   if (dhanResponse.success) {
-    addTickerToCache(alert.ticker);
+    await addTickerToCache(alert.ticker);
   }
   
-  // Keep only the last 1000 orders to prevent memory issues
+  // Keep only the last 1000 orders to prevent memory issues (fallback only)
   if (memoryOrders.length > 1000) {
     memoryOrders = memoryOrders.slice(-1000);
   }
@@ -170,15 +220,16 @@ export function storePlacedOrder(
 }
 
 // Store multiple placed orders (for multi-account support)
-export function storeMultiplePlacedOrders(
+export async function storeMultiplePlacedOrders(
   alert: TradingViewAlert,
   alertId: string,
   dhanResponses: DhanOrderResponse[],
   positionCalculations?: PositionCalculation[]
-): PlacedOrder[] {
+): Promise<PlacedOrder[]> {
   const orders: PlacedOrder[] = [];
   
-  dhanResponses.forEach((dhanResponse, index) => {
+  for (const dhanResponse of dhanResponses) {
+    const index = dhanResponses.indexOf(dhanResponse);
     // Find matching position calculation by account ID
     const positionCalculation = positionCalculations?.find(calc => 
       calc.accountId === dhanResponse.accountId && 
@@ -187,36 +238,63 @@ export function storeMultiplePlacedOrders(
     
     const quantity = positionCalculation?.finalQuantity || 1;
     
-    const order = storePlacedOrder(alert, alertId, quantity, dhanResponse, positionCalculation);
+    const order = await storePlacedOrder(alert, alertId, quantity, dhanResponse, positionCalculation);
     orders.push(order);
-  });
+  }
   
   return orders;
 }
 
 // Get all placed orders
-export function getAllPlacedOrders(): PlacedOrder[] {
+export async function getAllPlacedOrders(): Promise<PlacedOrder[]> {
+  if (await isDatabaseAvailable()) {
+    try {
+      return await getAllPlacedOrdersFromDatabase();
+    } catch (error) {
+      console.error('Failed to get orders from database, falling back to memory:', error);
+    }
+  }
+
+  // Fallback to memory storage
   return [...memoryOrders].sort((a, b) => 
     new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
 }
 
 // Get orders by ticker
-export function getOrdersByTicker(ticker: string): PlacedOrder[] {
+export async function getOrdersByTicker(ticker: string): Promise<PlacedOrder[]> {
+  if (await isDatabaseAvailable()) {
+    try {
+      return await getOrdersByTickerFromDatabase(ticker);
+    } catch (error) {
+      console.error('Failed to get orders by ticker from database, falling back to memory:', error);
+    }
+  }
+
+  // Fallback to memory storage
   return memoryOrders
     .filter(order => order.ticker.toUpperCase() === ticker.toUpperCase())
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
 // Get orders by status
-export function getOrdersByStatus(status: PlacedOrder['status']): PlacedOrder[] {
+export async function getOrdersByStatus(status: PlacedOrder['status']): Promise<PlacedOrder[]> {
+  if (await isDatabaseAvailable()) {
+    try {
+      return await getOrdersByStatusFromDatabase(status);
+    } catch (error) {
+      console.error('Failed to get orders by status from database, falling back to memory:', error);
+    }
+  }
+
+  // Fallback to memory storage
   return memoryOrders
     .filter(order => order.status === status)
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
 // Get order statistics
-export function getOrderStats(): {
+export async function getOrderStats(): Promise<{
   totalOrders: number;
   placedOrders: number;
   failedOrders: number;
@@ -224,7 +302,16 @@ export function getOrderStats(): {
   totalQuantity: number;
   totalValue: number;
   uniqueTickers: number;
-} {
+}> {
+  if (await isDatabaseAvailable()) {
+    try {
+      return await getOrderStatsFromDatabase();
+    } catch (error) {
+      console.error('Failed to get order stats from database, falling back to memory:', error);
+    }
+  }
+
+  // Fallback to memory storage
   const placedOrders = memoryOrders.filter(o => o.status === 'placed');
   const failedOrders = memoryOrders.filter(o => o.status === 'failed');
   const pendingOrders = memoryOrders.filter(o => o.status === 'pending');
@@ -295,7 +382,16 @@ export function getOrdersWithFilters(filters: {
 }
 
 // Update order status
-export function updateOrderStatus(orderId: string, status: PlacedOrder['status'], error?: string): boolean {
+export async function updateOrderStatus(orderId: string, status: PlacedOrder['status'], error?: string): Promise<boolean> {
+  if (await isDatabaseAvailable()) {
+    try {
+      return await updateOrderStatusInDatabase(orderId, status, error);
+    } catch (error) {
+      console.error('Failed to update order status in database, falling back to memory:', error);
+    }
+  }
+
+  // Fallback to memory storage
   const order = memoryOrders.find(o => o.id === orderId);
   if (order) {
     order.status = status;

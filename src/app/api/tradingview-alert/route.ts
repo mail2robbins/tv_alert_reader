@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
             console.log('Auto-placing order for BUY signal:', alert.ticker);
             
             // Check if ticker has already been ordered today
-            if (hasTickerBeenOrderedToday(alert.ticker)) {
+            if (await hasTickerBeenOrderedToday(alert.ticker)) {
               console.log(`Order blocked: Ticker ${alert.ticker} has already been ordered today`);
               await logError('Order blocked - duplicate ticker', new Error(`Ticker ${alert.ticker} already ordered today`));
             } else {
@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
                   orderType: process.env.DHAN_ORDER_TYPE || 'MARKET'
                 });
                 
-                const placedOrders = storeMultiplePlacedOrders(
+                const placedOrders = await storeMultiplePlacedOrders(
                   alert, 
                   alertId, 
                   dhanResponses,

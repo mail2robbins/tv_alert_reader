@@ -19,10 +19,10 @@ async function ensureDataDirectory() {
   }
 }
 
-// Generate unique ID for each alert
-function generateAlertId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
+// Generate unique ID for each alert (unused but kept for potential future use)
+// function generateAlertId(): string {
+//   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+// }
 
 // Format timestamp for logging
 function formatTimestamp(): string {
@@ -31,32 +31,8 @@ function formatTimestamp(): string {
 
 // Log an alert to the file
 export async function logAlert(alert: TradingViewAlert | ChartInkProcessedAlert, alertType: 'TradingView' | 'ChartInk' = 'TradingView'): Promise<string> {
-  // In serverless environments, use memory storage
-  if (isServerless) {
-    return storeAlertInMemory(alert, alertType);
-  }
-
-  const alertEntry: AlertLogEntry = {
-    id: generateAlertId(),
-    timestamp: formatTimestamp(),
-    data: alert,
-    alertType
-  };
-
-  const logLine = `[${alertEntry.timestamp}] ${JSON.stringify(alertEntry)}\n`;
-  
-  // Always log to console for debugging
-  console.log('Alert received:', alertEntry);
-  
-  // Try to write to file
-  try {
-    await ensureDataDirectory();
-    await fs.appendFile(ALERTS_LOG_FILE, logLine, 'utf8');
-    return alertEntry.id;
-  } catch (error) {
-    await logError('Failed to log alert', error);
-    throw new Error('Failed to save alert');
-  }
+  // Always use memory storage (which now uses database when available)
+  return await storeAlertInMemory(alert, alertType);
 }
 
 // Log an error to the error file

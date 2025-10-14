@@ -93,11 +93,11 @@ export async function GET(request: NextRequest) {
     let orders: PlacedOrder[];
     
     if (ticker) {
-      orders = getOrdersByTicker(ticker);
+      orders = await getOrdersByTicker(ticker);
     } else if (status) {
-      orders = getOrdersByStatus(status);
+      orders = await getOrdersByStatus(status);
     } else {
-      orders = getAllPlacedOrders();
+      orders = await getAllPlacedOrders();
     }
     
     if (format === 'csv') {

@@ -13,22 +13,22 @@ export async function GET(request: NextRequest) {
     let orders;
 
     if (ticker) {
-      orders = getOrdersByTicker(ticker);
+      orders = await getOrdersByTicker(ticker);
     } else if (status) {
-      orders = getOrdersByStatus(status as 'pending' | 'placed' | 'failed' | 'cancelled');
+      orders = await getOrdersByStatus(status as 'pending' | 'placed' | 'failed' | 'cancelled');
     } else {
-      orders = getAllPlacedOrders();
+      orders = await getAllPlacedOrders();
     }
 
     const responseData: {
       orders: typeof orders;
-      stats?: ReturnType<typeof getOrderStats>;
+      stats?: Awaited<ReturnType<typeof getOrderStats>>;
     } = {
       orders
     };
 
     if (includeStats) {
-      responseData.stats = getOrderStats();
+      responseData.stats = await getOrderStats();
     }
 
     return NextResponse.json(

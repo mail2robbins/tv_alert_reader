@@ -6,15 +6,23 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:init": "ts-node --project scripts/tsconfig.json scripts/init-database.ts",
+    "db:test": "ts-node --project scripts/tsconfig.json scripts/test-database-integration.ts",
+    "test:flow": "ts-node --project scripts/tsconfig.json scripts/test-complete-flow.ts",
+    "test:api": "ts-node --project scripts/tsconfig.json scripts/test-api-flow.ts",
+    "test:demo": "ts-node --project scripts/tsconfig.json scripts/test-flow-demo.ts",
+    "test:db": "ts-node --project scripts/tsconfig.json scripts/test-db-connection.ts"
   },
   "dependencies": {
+    "@types/pg": "^8.15.5",
     "@types/react-datepicker": "^6.2.0",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
-    "dotenv": "^17.2.2",
+    "dotenv": "^17.2.3",
     "express-rate-limit": "^8.1.0",
     "next": "15.5.3",
+    "pg": "^8.16.3",
     "react": "19.1.0",
     "react-datepicker": "^8.7.0",
     "react-dom": "19.1.0"
@@ -28,6 +36,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
     "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }

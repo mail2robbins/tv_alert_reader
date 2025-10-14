@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readAlerts, getAlertStats } from '@/lib/fileLogger';
+import { readAlertsFromMemory, getAlertStatsFromMemory } from '@/lib/memoryStorage';
 import { validateDateRange } from '@/lib/validation';
 import { ApiResponse, AlertFilters, AlertLogEntry } from '@/types/alert';
 
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     };
 
     // Read alerts with filters
-    const allAlerts = await readAlerts(filters);
+    const allAlerts = await readAlertsFromMemory(filters);
     
     // Apply pagination
     const totalCount = allAlerts.length;
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
 
     // Include statistics if requested
     if (includeStats) {
-      const stats = await getAlertStats();
+      const stats = await getAlertStatsFromMemory();
       responseData.stats = stats;
     }
 

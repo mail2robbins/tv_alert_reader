@@ -1,6 +1,8 @@
 import { AlertLogEntry, TradingViewAlert, ChartInkProcessedAlert } from '@/types/alert';
+import { storeAlertInDatabase, readAlertsFromDatabase, getAlertStatsFromDatabase } from './alertDatabase';
+import { isDatabaseAvailable } from './database';
 
-// In-memory storage for serverless environments
+// In-memory storage for serverless environments (fallback)
 let memoryAlerts: AlertLogEntry[] = [];
 
 // Generate unique ID for each alert
@@ -13,8 +15,17 @@ function formatTimestamp(): string {
   return new Date().toISOString();
 }
 
-// Store alert in memory
-export function storeAlertInMemory(alert: TradingViewAlert | ChartInkProcessedAlert, alertType: 'TradingView' | 'ChartInk' = 'TradingView'): string {
+// Store alert in memory or database
+export async function storeAlertInMemory(alert: TradingViewAlert | ChartInkProcessedAlert, alertType: 'TradingView' | 'ChartInk' = 'TradingView'): Promise<string> {
+  if (await isDatabaseAvailable()) {
+    try {
+      return await storeAlertInDatabase(alert, alertType);
+    } catch (error) {
+      console.error('Failed to store alert in database, falling back to memory:', error);
+    }
+  }
+
+  // Fallback to memory storage
   const alertEntry: AlertLogEntry = {
     id: generateAlertId(),
     timestamp: formatTimestamp(),
@@ -33,14 +44,23 @@ export function storeAlertInMemory(alert: TradingViewAlert | ChartInkProcessedAl
   return alertEntry.id;
 }
 
-// Read alerts from memory with optional filtering
-export function readAlertsFromMemory(filters?: {
+// Read alerts from memory or database with optional filtering
+export async function readAlertsFromMemory(filters?: {
   startDate?: string;
   endDate?: string;
   ticker?: string;
   signal?: string;
   strategy?: string;
-}): AlertLogEntry[] {
+}): Promise<AlertLogEntry[]> {
+  if (await isDatabaseAvailable()) {
+    try {
+      return await readAlertsFromDatabase(filters);
+    } catch (error) {
+      console.error('Failed to read alerts from database, falling back to memory:', error);
+    }
+  }
+
+  // Fallback to memory storage
   let filteredAlerts = [...memoryAlerts];
 
   if (filters) {
@@ -61,14 +81,23 @@ export function readAlertsFromMemory(filters?: {
   return filteredAlerts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
-// Get alert statistics from memory
-export function getAlertStatsFromMemory(): {
+// Get alert statistics from memory or database
+export async function getAlertStatsFromMemory(): Promise<{
   totalAlerts: number;
   buySignals: number;
   sellSignals: number;
   uniqueTickers: number;
   strategies: string[];
-} {
+}> {
+  if (await isDatabaseAvailable()) {
+    try {
+      return await getAlertStatsFromDatabase();
+    } catch (error) {
+      console.error('Failed to get alert stats from database, falling back to memory:', error);
+    }
+  }
+
+  // Fallback to memory storage
   const buySignals = memoryAlerts.filter(a => a.data.signal === 'BUY').length;
   const sellSignals = memoryAlerts.filter(a => a.data.signal === 'SELL').length;
   const uniqueTickers = new Set(memoryAlerts.map(a => a.data.ticker)).size;

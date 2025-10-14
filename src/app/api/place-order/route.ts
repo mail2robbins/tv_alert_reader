@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if ticker has already been ordered today
-    if (hasTickerBeenOrderedToday(alert.ticker)) {
+    if (await hasTickerBeenOrderedToday(alert.ticker)) {
       console.log(`Order blocked: Ticker ${alert.ticker} has already been ordered today`);
       return NextResponse.json(
         { success: false, error: `Order blocked: Ticker ${alert.ticker} has already been ordered today` } as ApiResponse<null>,
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
         });
 
         // Store all orders with all position calculations (including failed ones)
-        const placedOrders = storeMultiplePlacedOrders(
+        const placedOrders = await storeMultiplePlacedOrders(
           alert, 
           alert.id || 'unknown', 
           dhanResponses, 
@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Store the order
-      const placedOrder = storePlacedOrder(alert, alert.id || 'unknown', finalQuantity, dhanResponse, positionCalculation);
+      const placedOrder = await storePlacedOrder(alert, alert.id || 'unknown', finalQuantity, dhanResponse, positionCalculation);
 
       // Rebase TP/SL for successful order if configured (legacy mode)
       let rebaseResult = null;
