@@ -97,7 +97,7 @@ export async function initializeDatabaseSchema(): Promise<void> {
         error TEXT,
         order_value DECIMAL(15,4) NOT NULL,
         leveraged_value DECIMAL(15,4) NOT NULL,
-        position_size_percentage DECIMAL(5,4) NOT NULL,
+        position_size_percentage DECIMAL(6,2) NOT NULL,
         stop_loss_price DECIMAL(15,4),
         target_price DECIMAL(15,4),
         account_id INTEGER,
