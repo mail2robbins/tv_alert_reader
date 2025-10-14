@@ -50,6 +50,7 @@ export default function Home() {
 
 
   const handleDateChange = useCallback((newStartDate: Date | null, newEndDate: Date | null) => {
+    console.log('Date change received:', { newStartDate, newEndDate });
     setStartDate(newStartDate);
     setEndDate(newEndDate);
   }, []);
@@ -70,10 +71,14 @@ export default function Home() {
         const params = new URLSearchParams();
         
         if (startDate) {
-          params.append('startDate', startDate.toISOString().split('T')[0]);
+          const startDateStr = startDate.toISOString().split('T')[0];
+          console.log('Sending startDate:', startDateStr);
+          params.append('startDate', startDateStr);
         }
         if (endDate) {
-          params.append('endDate', endDate.toISOString().split('T')[0]);
+          const endDateStr = endDate.toISOString().split('T')[0];
+          console.log('Sending endDate:', endDateStr);
+          params.append('endDate', endDateStr);
         }
         if (newFilters.ticker) {
           params.append('ticker', newFilters.ticker);
@@ -85,6 +90,8 @@ export default function Home() {
           params.append('strategy', newFilters.strategy);
         }
         params.append('includeStats', 'true');
+        // Add cache-busting parameter to ensure fresh data
+        params.append('_t', Date.now().toString());
 
         const response = await fetch(`/api/alerts?${params.toString()}`);
         const data = await response.json();
@@ -106,8 +113,10 @@ export default function Home() {
   }, [filterInputs, startDate, endDate]);
 
   const handleLoadAllData = useCallback(() => {
-    // Load all data without any filters
+    // Load all data without any filters - clear all filters including dates
     setFilterInputs({ ticker: '', signal: '', strategy: '' });
+    setStartDate(null);
+    setEndDate(null);
     
     // Fetch data directly without filters
     setIsLoading(true);
@@ -115,6 +124,8 @@ export default function Home() {
       try {
         const params = new URLSearchParams();
         params.append('includeStats', 'true');
+        // Add cache-busting parameter to ensure fresh data
+        params.append('_t', Date.now().toString());
 
         const response = await fetch(`/api/alerts?${params.toString()}`);
         const data = await response.json();
@@ -146,7 +157,7 @@ export default function Home() {
   const fetchOrders = useCallback(async () => {
     setIsLoadingOrders(true);
     try {
-      const response = await fetch('/api/orders?includeStats=true');
+      const response = await fetch(`/api/orders?includeStats=true&_t=${Date.now()}`);
       const data = await response.json();
 
       if (data.success) {
@@ -185,7 +196,7 @@ export default function Home() {
                 Monitor and analyze your TradingView alerts in real-time
               </p>
             </div>
-            <button
+            {/* <button
               onClick={handleLoadData}
               disabled={isLoading}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
@@ -206,7 +217,7 @@ export default function Home() {
                   Refresh
                 </>
               )}
-            </button>
+            </button> */}
           </div>
         </div>
 
@@ -261,6 +272,7 @@ export default function Home() {
           <DateFilter
             onDateChange={handleDateChange}
             onLoadAllData={handleLoadAllData}
+            onLoadData={handleLoadData}
             isLoading={isLoading}
             startDate={startDate}
             endDate={endDate}

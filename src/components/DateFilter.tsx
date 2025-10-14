@@ -1,28 +1,40 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
 interface DateFilterProps {
   onDateChange: (startDate: Date | null, endDate: Date | null) => void;
   onLoadAllData?: () => void;
+  onLoadData?: () => void;
   isLoading?: boolean;
   startDate?: Date | null;
   endDate?: Date | null;
 }
 
-export default function DateFilter({ onDateChange, onLoadAllData, isLoading, startDate, endDate }: DateFilterProps) {
+export default function DateFilter({ onDateChange, onLoadAllData, onLoadData, isLoading, startDate, endDate }: DateFilterProps) {
   const [localStartDate, setLocalStartDate] = useState<Date | null>(startDate || null);
   const [localEndDate, setLocalEndDate] = useState<Date | null>(endDate || null);
 
+  // Sync local state with parent state when props change
+  React.useEffect(() => {
+    setLocalStartDate(startDate || null);
+  }, [startDate]);
+
+  React.useEffect(() => {
+    setLocalEndDate(endDate || null);
+  }, [endDate]);
+
   const handleStartDateChange = (date: Date | null) => {
     setLocalStartDate(date);
+    // Use the current localEndDate value
     onDateChange(date, localEndDate);
   };
 
   const handleEndDateChange = (date: Date | null) => {
     setLocalEndDate(date);
+    // Use the current localStartDate value
     onDateChange(localStartDate, date);
   };
 
@@ -123,6 +135,30 @@ export default function DateFilter({ onDateChange, onLoadAllData, isLoading, sta
         >
           Clear
         </button>
+        {onLoadData && (
+          <button
+            onClick={onLoadData}
+            disabled={isLoading}
+            className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isLoading ? (
+              <>
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Loading...
+              </>
+            ) : (
+              <>
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                Load Data
+              </>
+            )}
+          </button>
+        )}
         {onLoadAllData && (
           <button
             onClick={onLoadAllData}

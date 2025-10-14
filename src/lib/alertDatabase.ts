@@ -62,13 +62,19 @@ export async function readAlertsFromDatabase(filters?: {
     
     if (filters) {
       if (filters.startDate) {
+        // Start of day for start date
+        const startDate = new Date(filters.startDate);
+        startDate.setHours(0, 0, 0, 0);
         conditions.push(`timestamp >= $${queryParams.length + 1}`);
-        queryParams.push(filters.startDate);
+        queryParams.push(startDate.toISOString());
       }
       
       if (filters.endDate) {
+        // End of day for end date
+        const endDate = new Date(filters.endDate);
+        endDate.setHours(23, 59, 59, 999);
         conditions.push(`timestamp <= $${queryParams.length + 1}`);
-        queryParams.push(filters.endDate);
+        queryParams.push(endDate.toISOString());
       }
       
       if (filters.ticker) {

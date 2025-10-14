@@ -120,8 +120,20 @@ export async function readAlerts(filters?: {
         if (filters) {
           const alertDate = new Date(alertEntry.timestamp);
           
-          if (filters.startDate && alertDate < new Date(filters.startDate)) continue;
-          if (filters.endDate && alertDate > new Date(filters.endDate)) continue;
+          // For start date, we want alerts >= startDate (inclusive)
+          if (filters.startDate) {
+            const startDate = new Date(filters.startDate);
+            startDate.setHours(0, 0, 0, 0); // Start of day
+            if (alertDate < startDate) continue;
+          }
+          
+          // For end date, we want alerts <= endDate (inclusive)
+          if (filters.endDate) {
+            const endDate = new Date(filters.endDate);
+            endDate.setHours(23, 59, 59, 999); // End of day
+            if (alertDate > endDate) continue;
+          }
+          
           if (filters.ticker && alertEntry.data.ticker !== filters.ticker) continue;
           if (filters.signal && alertEntry.data.signal !== filters.signal) continue;
           if (filters.strategy && alertEntry.data.strategy !== filters.strategy) continue;

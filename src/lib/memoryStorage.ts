@@ -67,8 +67,20 @@ export async function readAlertsFromMemory(filters?: {
     filteredAlerts = filteredAlerts.filter(alert => {
       const alertDate = new Date(alert.timestamp);
       
-      if (filters.startDate && alertDate < new Date(filters.startDate)) return false;
-      if (filters.endDate && alertDate > new Date(filters.endDate)) return false;
+      // For start date, we want alerts >= startDate (inclusive)
+      if (filters.startDate) {
+        const startDate = new Date(filters.startDate);
+        startDate.setHours(0, 0, 0, 0); // Start of day
+        if (alertDate < startDate) return false;
+      }
+      
+      // For end date, we want alerts <= endDate (inclusive)
+      if (filters.endDate) {
+        const endDate = new Date(filters.endDate);
+        endDate.setHours(23, 59, 59, 999); // End of day
+        if (alertDate > endDate) return false;
+      }
+      
       if (filters.ticker && alert.data.ticker !== filters.ticker) return false;
       if (filters.signal && alert.data.signal !== filters.signal) return false;
       if (filters.strategy && alert.data.strategy !== filters.strategy) return false;
