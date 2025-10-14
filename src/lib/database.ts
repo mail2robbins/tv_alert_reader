@@ -19,17 +19,17 @@ export function initializeDatabase(): Pool {
     ssl: {
       rejectUnauthorized: false
     },
-    max: 10, // Reduced from 20
-    min: 1, // Minimum connections
-    idleTimeoutMillis: 10000, // Reduced from 30000
-    connectionTimeoutMillis: 5000, // Increased from 2000
+    max: 5, // Further reduced for faster connections
+    min: 0, // No minimum connections to avoid hanging
+    idleTimeoutMillis: 5000, // Faster cleanup
+    connectionTimeoutMillis: 3000, // Faster timeout
   });
 
   return pool;
 }
 
 // Get database connection with retry logic
-export async function getDatabaseConnection(retries: number = 3): Promise<PoolClient> {
+export async function getDatabaseConnection(retries: number = 2): Promise<PoolClient> {
   const db = initializeDatabase();
   
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -43,8 +43,8 @@ export async function getDatabaseConnection(retries: number = 3): Promise<PoolCl
         throw new Error(`Failed to connect to database after ${retries} attempts: ${error}`);
       }
       
-      // Wait before retrying (exponential backoff)
-      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+      // Shorter wait time for faster retries
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
   }
   
