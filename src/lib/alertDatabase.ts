@@ -78,8 +78,8 @@ export async function readAlertsFromDatabase(filters?: {
       }
       
       if (filters.ticker) {
-        conditions.push(`ticker = $${queryParams.length + 1}`);
-        queryParams.push(filters.ticker);
+        conditions.push(`UPPER(ticker) LIKE UPPER($${queryParams.length + 1})`);
+        queryParams.push(`%${filters.ticker}%`);
       }
       
       if (filters.signal) {

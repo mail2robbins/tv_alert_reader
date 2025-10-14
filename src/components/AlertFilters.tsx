@@ -76,7 +76,7 @@ export default function AlertFilters({ onLoadData, isLoading, availableStrategie
             type="text"
             value={ticker}
             onChange={(e) => handleInputChange('ticker', e.target.value.toUpperCase())}
-            placeholder="e.g., AAPL"
+            placeholder="e.g., AAPL (partial match)"
             className="w-full px-3 py-2 border border-gray-400 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
           />
         </div>

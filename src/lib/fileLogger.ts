@@ -134,7 +134,7 @@ export async function readAlerts(filters?: {
             if (alertDate > endDate) continue;
           }
           
-          if (filters.ticker && alertEntry.data.ticker !== filters.ticker) continue;
+          if (filters.ticker && !alertEntry.data.ticker.toUpperCase().includes(filters.ticker.toUpperCase())) continue;
           if (filters.signal && alertEntry.data.signal !== filters.signal) continue;
           if (filters.strategy && alertEntry.data.strategy !== filters.strategy) continue;
         }

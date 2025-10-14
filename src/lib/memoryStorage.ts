@@ -81,7 +81,7 @@ export async function readAlertsFromMemory(filters?: {
         if (alertDate > endDate) return false;
       }
       
-      if (filters.ticker && alert.data.ticker !== filters.ticker) return false;
+      if (filters.ticker && !alert.data.ticker.toUpperCase().includes(filters.ticker.toUpperCase())) return false;
       if (filters.signal && alert.data.signal !== filters.signal) return false;
       if (filters.strategy && alert.data.strategy !== filters.strategy) return false;
       

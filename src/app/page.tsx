@@ -84,6 +84,7 @@ export default function Home() {
           params.append('endDate', endDateStr);
         }
         if (newFilters.ticker) {
+          console.log('Searching for ticker containing:', newFilters.ticker);
           params.append('ticker', newFilters.ticker);
         }
         if (newFilters.signal) {
