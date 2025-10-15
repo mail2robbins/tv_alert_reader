@@ -38,6 +38,8 @@ export default function Home() {
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
+  const [orderStartDate, setOrderStartDate] = useState<Date | null>(null);
+  const [orderEndDate, setOrderEndDate] = useState<Date | null>(null);
   const [filterInputs, setFilterInputs] = useState<{
     ticker: string;
     signal: string;
@@ -53,6 +55,12 @@ export default function Home() {
     console.log('Date change received:', { newStartDate, newEndDate });
     setStartDate(newStartDate);
     setEndDate(newEndDate);
+  }, []);
+
+  const handleOrderDateChange = useCallback((newStartDate: Date | null, newEndDate: Date | null) => {
+    console.log('Order date change received:', { newStartDate, newEndDate });
+    setOrderStartDate(newStartDate);
+    setOrderEndDate(newEndDate);
   }, []);
 
 
@@ -165,7 +173,23 @@ export default function Home() {
   const fetchOrders = useCallback(async () => {
     setIsLoadingOrders(true);
     try {
-      const response = await fetch(`/api/orders?includeStats=true&_t=${Date.now()}`);
+      const params = new URLSearchParams();
+      params.append('includeStats', 'true');
+      
+      // Add date filters if they exist
+      if (orderStartDate) {
+        const startDateStr = orderStartDate.toISOString().split('T')[0];
+        params.append('startDate', startDateStr);
+      }
+      if (orderEndDate) {
+        const endDateStr = orderEndDate.toISOString().split('T')[0];
+        params.append('endDate', endDateStr);
+      }
+      
+      // Add cache-busting parameter
+      params.append('_t', Date.now().toString());
+
+      const response = await fetch(`/api/orders?${params.toString()}`);
       const data = await response.json();
 
       if (data.success) {
@@ -179,6 +203,38 @@ export default function Home() {
     } finally {
       setIsLoadingOrders(false);
     }
+  }, [orderStartDate, orderEndDate]);
+
+  const handleLoadAllOrders = useCallback(() => {
+    // Clear order date filters and load all orders
+    setOrderStartDate(null);
+    setOrderEndDate(null);
+    
+    // Fetch all orders without date filters
+    setIsLoadingOrders(true);
+    const fetchAllOrders = async () => {
+      try {
+        const params = new URLSearchParams();
+        params.append('includeStats', 'true');
+        params.append('_t', Date.now().toString());
+
+        const response = await fetch(`/api/orders?${params.toString()}`);
+        const data = await response.json();
+
+        if (data.success) {
+          setOrders(data.data.orders);
+          setOrderStats(data.data.stats);
+        } else {
+          console.error('Failed to fetch orders:', data.error);
+        }
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+      } finally {
+        setIsLoadingOrders(false);
+      }
+    };
+    
+    fetchAllOrders();
   }, []);
 
   return (
@@ -423,6 +479,18 @@ export default function Home() {
               />
             </div>
           )}
+
+          {/* Order Date Filter */}
+          <div className="mb-6">
+            <DateFilter
+              onDateChange={handleOrderDateChange}
+              onLoadAllData={handleLoadAllOrders}
+              onLoadData={fetchOrders}
+              isLoading={isLoadingOrders}
+              startDate={orderStartDate}
+              endDate={orderEndDate}
+            />
+          </div>
 
           {/* Orders Table */}
           <OrdersTable orders={orders} isLoading={isLoadingOrders} />

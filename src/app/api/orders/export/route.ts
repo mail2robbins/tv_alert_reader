@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
     } = body;
     
     // Use the utility function for filtering
-    const orders = getOrdersWithFilters({
+    const orders = await getOrdersWithFilters({
       tickers: tickers || undefined,
       statuses: statuses || undefined,
       startDate: startDate ? new Date(startDate) : undefined,

@@ -342,13 +342,15 @@ export function getOrdersByDateRange(startDate: Date, endDate: Date): PlacedOrde
 }
 
 // Get orders with custom filters
-export function getOrdersWithFilters(filters: {
+export async function getOrdersWithFilters(filters: {
   tickers?: string[];
   statuses?: PlacedOrder['status'][];
   startDate?: Date;
   endDate?: Date;
-}): PlacedOrder[] {
-  let filteredOrders = [...memoryOrders];
+}): Promise<PlacedOrder[]> {
+  // Get all orders first (from database or memory)
+  const allOrders = await getAllPlacedOrders();
+  let filteredOrders = [...allOrders];
   
   if (filters.tickers && filters.tickers.length > 0) {
     filteredOrders = filteredOrders.filter(order => 
@@ -365,15 +367,21 @@ export function getOrdersWithFilters(filters: {
   }
   
   if (filters.startDate) {
-    filteredOrders = filteredOrders.filter(order => 
-      new Date(order.timestamp) >= filters.startDate!
-    );
+    filteredOrders = filteredOrders.filter(order => {
+      const orderDate = new Date(order.timestamp);
+      const startDate = new Date(filters.startDate!);
+      startDate.setHours(0, 0, 0, 0); // Start of day
+      return orderDate >= startDate;
+    });
   }
   
   if (filters.endDate) {
-    filteredOrders = filteredOrders.filter(order => 
-      new Date(order.timestamp) <= filters.endDate!
-    );
+    filteredOrders = filteredOrders.filter(order => {
+      const orderDate = new Date(order.timestamp);
+      const endDate = new Date(filters.endDate!);
+      endDate.setHours(23, 59, 59, 999); // End of day
+      return orderDate <= endDate;
+    });
   }
   
   return filteredOrders.sort((a, b) => 

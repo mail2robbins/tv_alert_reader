@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllPlacedOrders, getOrdersByTicker, getOrdersByStatus, getOrderStats } from '@/lib/orderTracker';
+import { getAllPlacedOrders, getOrderStats, getOrdersWithFilters } from '@/lib/orderTracker';
 import { ApiResponse } from '@/types/alert';
+import { validateDateRange } from '@/lib/validation';
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,14 +9,46 @@ export async function GET(request: NextRequest) {
     
     const ticker = searchParams.get('ticker');
     const status = searchParams.get('status');
+    const startDate = searchParams.get('startDate') || undefined;
+    const endDate = searchParams.get('endDate') || undefined;
     const includeStats = searchParams.get('includeStats') === 'true';
+
+    // Validate date range if provided
+    if (startDate || endDate) {
+      const dateValidation = validateDateRange(startDate, endDate);
+      if (!dateValidation.isValid) {
+        return NextResponse.json(
+          { success: false, error: dateValidation.error } as ApiResponse<null>,
+          { status: 400 }
+        );
+      }
+    }
 
     let orders;
 
-    if (ticker) {
-      orders = await getOrdersByTicker(ticker);
-    } else if (status) {
-      orders = await getOrdersByStatus(status as 'pending' | 'placed' | 'failed' | 'cancelled');
+    // Use getOrdersWithFilters if we have any filters (including date filters)
+    if (ticker || status || startDate || endDate) {
+      const filters: {
+        tickers?: string[];
+        statuses?: ('pending' | 'placed' | 'failed' | 'cancelled')[];
+        startDate?: Date;
+        endDate?: Date;
+      } = {};
+
+      if (ticker) {
+        filters.tickers = [ticker];
+      }
+      if (status) {
+        filters.statuses = [status as 'pending' | 'placed' | 'failed' | 'cancelled'];
+      }
+      if (startDate) {
+        filters.startDate = new Date(startDate);
+      }
+      if (endDate) {
+        filters.endDate = new Date(endDate);
+      }
+
+      orders = await getOrdersWithFilters(filters);
     } else {
       orders = await getAllPlacedOrders();
     }
