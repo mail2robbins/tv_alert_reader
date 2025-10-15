@@ -11,6 +11,7 @@ import OrderStatsCard from '@/components/OrderStatsCard';
 import FundManager from '@/components/FundManager';
 import AccountConfigCard from '@/components/AccountConfigCard';
 import ExternalWebhookConfig from '@/components/ExternalWebhookConfig';
+import TickerInput from '@/components/TickerInput';
 import { PlacedOrder } from '@/lib/orderTracker';
 
 interface Stats {
@@ -40,6 +41,7 @@ export default function Home() {
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [orderStartDate, setOrderStartDate] = useState<Date | null>(null);
   const [orderEndDate, setOrderEndDate] = useState<Date | null>(null);
+  const [orderTicker, setOrderTicker] = useState<string>('');
   const [filterInputs, setFilterInputs] = useState<{
     ticker: string;
     signal: string;
@@ -61,6 +63,11 @@ export default function Home() {
     console.log('Order date change received:', { newStartDate, newEndDate });
     setOrderStartDate(newStartDate);
     setOrderEndDate(newEndDate);
+  }, []);
+
+  const handleOrderTickerChange = useCallback((ticker: string) => {
+    console.log('Order ticker change received:', ticker);
+    setOrderTicker(ticker);
   }, []);
 
 
@@ -186,6 +193,11 @@ export default function Home() {
         params.append('endDate', endDateStr);
       }
       
+      // Add ticker filter if it exists
+      if (orderTicker.trim()) {
+        params.append('ticker', orderTicker.trim());
+      }
+      
       // Add cache-busting parameter
       params.append('_t', Date.now().toString());
 
@@ -203,14 +215,15 @@ export default function Home() {
     } finally {
       setIsLoadingOrders(false);
     }
-  }, [orderStartDate, orderEndDate]);
+  }, [orderStartDate, orderEndDate, orderTicker]);
 
   const handleLoadAllOrders = useCallback(() => {
-    // Clear order date filters and load all orders
+    // Clear all order filters and load all orders
     setOrderStartDate(null);
     setOrderEndDate(null);
+    setOrderTicker('');
     
-    // Fetch all orders without date filters
+    // Fetch all orders without any filters
     setIsLoadingOrders(true);
     const fetchAllOrders = async () => {
       try {
@@ -480,16 +493,63 @@ export default function Home() {
             </div>
           )}
 
-          {/* Order Date Filter */}
+          {/* Order Filters */}
           <div className="mb-6">
-            <DateFilter
-              onDateChange={handleOrderDateChange}
-              onLoadAllData={handleLoadAllOrders}
-              onLoadData={fetchOrders}
-              isLoading={isLoadingOrders}
-              startDate={orderStartDate}
-              endDate={orderEndDate}
-            />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Date Filter */}
+              <DateFilter
+                onDateChange={handleOrderDateChange}
+                onLoadAllData={handleLoadAllOrders}
+                onLoadData={fetchOrders}
+                isLoading={isLoadingOrders}
+                startDate={orderStartDate}
+                endDate={orderEndDate}
+              />
+              
+              {/* Ticker Filter */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Filter by Ticker</h3>
+                <TickerInput
+                  value={orderTicker}
+                  onChange={handleOrderTickerChange}
+                  placeholder="Enter ticker symbol (e.g., RELIANCE)"
+                  className="mb-4"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={fetchOrders}
+                    disabled={isLoadingOrders}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {isLoadingOrders ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        Apply Filters
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setOrderTicker('');
+                      fetchOrders();
+                    }}
+                    className="px-4 py-2 bg-gray-100 text-gray-800 rounded-md hover:bg-gray-200 transition-colors"
+                  >
+                    Clear Ticker
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Orders Table */}

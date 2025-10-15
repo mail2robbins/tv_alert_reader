@@ -355,7 +355,7 @@ export async function getOrdersWithFilters(filters: {
   if (filters.tickers && filters.tickers.length > 0) {
     filteredOrders = filteredOrders.filter(order => 
       filters.tickers!.some(ticker => 
-        order.ticker.toUpperCase() === ticker.toUpperCase()
+        order.ticker.toUpperCase().includes(ticker.toUpperCase())
       )
     );
   }
