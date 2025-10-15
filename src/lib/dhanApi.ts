@@ -625,6 +625,8 @@ export interface DhanOrderDetails {
 // Get order details by order ID
 export async function getDhanOrderDetails(orderId: string, accessToken: string): Promise<DhanOrderDetails> {
   try {
+    console.log(`🔍 Fetching order details for orderId: ${orderId}`);
+    
     const response = await fetch(`https://api.dhan.co/v2/orders/${orderId}`, {
       method: 'GET',
       headers: {
@@ -633,14 +635,55 @@ export async function getDhanOrderDetails(orderId: string, accessToken: string):
       }
     });
 
+    console.log(`📡 Response status: ${response.status} ${response.statusText}`);
+
     if (response.ok) {
       const data = await response.json();
-      return data;
+      console.log(`📋 Raw order details response:`, JSON.stringify(data, null, 2));
+      
+      // Validate that we have the expected structure
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid response structure from Dhan API');
+      }
+      
+      // Map the response to our expected interface
+      const orderDetails: DhanOrderDetails = {
+        orderId: data.orderId || orderId,
+        dhanClientId: data.dhanClientId || '',
+        correlationId: data.correlationId || '',
+        transactionType: data.transactionType || '',
+        exchangeSegment: data.exchangeSegment || '',
+        productType: data.productType || '',
+        orderType: data.orderType || '',
+        securityId: data.securityId || '',
+        quantity: data.quantity || 0,
+        price: data.price || 0,
+        averagePrice: data.averagePrice || data.avgPrice || null,
+        filledQuantity: data.filledQuantity || data.filledQty || 0,
+        status: data.status || data.orderStatus || 'UNKNOWN',
+        targetPrice: data.targetPrice || null,
+        stopLossPrice: data.stopLossPrice || null,
+        trailingJump: data.trailingJump || null,
+        orderTime: data.orderTime || null,
+        updateTime: data.updateTime || null
+      };
+      
+      console.log(`✅ Mapped order details:`, {
+        orderId: orderDetails.orderId,
+        status: orderDetails.status,
+        price: orderDetails.price,
+        averagePrice: orderDetails.averagePrice,
+        filledQuantity: orderDetails.filledQuantity
+      });
+      
+      return orderDetails;
     } else {
-      throw new Error(`Failed to fetch order details: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`❌ API Error Response:`, errorText);
+      throw new Error(`Failed to fetch order details: ${response.status} ${response.statusText} - ${errorText}`);
     }
   } catch (error) {
-    console.error('Error fetching order details:', error);
+    console.error('❌ Error fetching order details:', error);
     throw error;
   }
 }
@@ -763,6 +806,36 @@ export async function rebaseOrderTpAndSl(
   };
 }> {
   try {
+    // Check if rebasing is globally disabled
+    const rebasingDisabled = process.env.DISABLE_TP_SL_REBASE === 'true';
+    if (rebasingDisabled) {
+      console.log(`⚠️ TP/SL rebasing is globally disabled via DISABLE_TP_SL_REBASE environment variable`);
+      return { 
+        success: true, 
+        message: 'TP/SL rebasing is disabled globally' 
+      };
+    }
+
+    // Check if we're in production and rebasing is failing consistently
+    const isProduction = process.env.NODE_ENV === 'production';
+    const disableInProduction = process.env.DISABLE_REBASE_IN_PRODUCTION === 'true';
+    if (isProduction && disableInProduction) {
+      console.log(`⚠️ TP/SL rebasing is disabled in production environment`);
+      return { 
+        success: true, 
+        message: 'TP/SL rebasing is disabled in production' 
+      };
+    }
+
+    // Check if rebasing is disabled for this specific account
+    if (!accountConfig.rebaseTpAndSl) {
+      console.log(`⚠️ TP/SL rebasing is disabled for account ${accountConfig.clientId}`);
+      return { 
+        success: true, 
+        message: 'TP/SL rebasing is disabled for this account' 
+      };
+    }
+
     console.log(`🔄 Starting TP/SL rebase for order ${orderId} on account ${accountConfig.clientId}`);
     
     // Retry logic to wait for order execution
@@ -786,7 +859,32 @@ export async function rebaseOrderTpAndSl(
           return { success: false, error: 'Failed to fetch order details after all retries' };
         }
 
-        console.log(`📋 Order status: ${orderDetails.status}, Price: ${orderDetails.price}, AveragePrice: ${orderDetails.averagePrice}`);
+        // Check if the response has meaningful data
+        const hasValidData = orderDetails.status !== undefined && 
+                           orderDetails.status !== null && 
+                           orderDetails.status !== '';
+        
+        if (!hasValidData) {
+          console.log(`⚠️ Order details returned but with invalid/empty data on attempt ${attempt}:`, {
+            status: orderDetails.status,
+            price: orderDetails.price,
+            averagePrice: orderDetails.averagePrice,
+            filledQuantity: orderDetails.filledQuantity
+          });
+          
+          if (attempt < maxRetries) {
+            console.log(`⏳ Retrying in ${retryDelay}ms due to invalid data...`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            continue;
+          } else {
+            return { 
+              success: false, 
+              error: `Order details returned but with invalid data after ${maxRetries} attempts. This might indicate an API issue or invalid order ID.` 
+            };
+          }
+        }
+
+        console.log(`📋 Order status: ${orderDetails.status}, Price: ${orderDetails.price}, AveragePrice: ${orderDetails.averagePrice}, FilledQuantity: ${orderDetails.filledQuantity}`);
         
         // Use averagePrice if available, otherwise use price
         actualEntryPrice = orderDetails.averagePrice || orderDetails.price;
@@ -797,8 +895,24 @@ export async function rebaseOrderTpAndSl(
           break;
         }
         
-        // If order is still in TRANSIT or doesn't have entry price, wait and retry
-        if (orderDetails.status === 'TRANSIT' || !actualEntryPrice || actualEntryPrice <= 0) {
+        // Check if order is in a terminal state (COMPLETE, REJECTED, CANCELLED)
+        const terminalStatuses = ['COMPLETE', 'REJECTED', 'CANCELLED', 'FAILED'];
+        if (terminalStatuses.includes(orderDetails.status)) {
+          if (actualEntryPrice && actualEntryPrice > 0) {
+            console.log(`✅ Order in terminal state ${orderDetails.status} with valid entry price: ${actualEntryPrice}`);
+            break;
+          } else {
+            console.log(`❌ Order in terminal state ${orderDetails.status} but no valid entry price available`);
+            return { 
+              success: false, 
+              error: `Order in terminal state ${orderDetails.status} but no valid entry price available` 
+            };
+          }
+        }
+        
+        // If order is still in TRANSIT, PENDING, or doesn't have entry price, wait and retry
+        const pendingStatuses = ['TRANSIT', 'PENDING', 'OPEN', 'UNKNOWN'];
+        if (pendingStatuses.includes(orderDetails.status) || !actualEntryPrice || actualEntryPrice <= 0) {
           console.log(`⏳ Order still in ${orderDetails.status} status or no entry price, waiting ${retryDelay}ms before retry...`);
           if (attempt < maxRetries) {
             await new Promise(resolve => setTimeout(resolve, retryDelay));
@@ -816,10 +930,19 @@ export async function rebaseOrderTpAndSl(
     }
     
     if (!actualEntryPrice || actualEntryPrice <= 0) {
-      return { 
-        success: false, 
-        error: `Order not executed or no valid entry price after ${maxRetries} attempts. Order status: ${orderDetails?.status || 'unknown'}` 
-      };
+      // If we still don't have a valid entry price after all retries, 
+      // we can either fail or use the original alert price as fallback
+      const useOriginalPriceAsFallback = process.env.REBASE_FALLBACK_TO_ALERT_PRICE === 'true';
+      
+      if (useOriginalPriceAsFallback) {
+        console.log(`⚠️ No valid entry price found, using original alert price as fallback: ${originalAlertPrice}`);
+        actualEntryPrice = originalAlertPrice;
+      } else {
+        return { 
+          success: false, 
+          error: `Order not executed or no valid entry price after ${maxRetries} attempts. Order status: ${orderDetails?.status || 'unknown'}` 
+        };
+      }
     }
 
     console.log(`📊 Order details:`, {
