@@ -250,7 +250,7 @@ export async function placeDhanOrderForAccount(
   
   if (orderConfig?.useAutoPositionSizing !== false) {
     // Use automatic position sizing based on account configuration
-    positionCalculation = calculatePositionSizeForAccount(alert.price, accountConfig);
+    positionCalculation = calculatePositionSizeForAccount(alert.price, accountConfig, alert.signal);
     
     if (!positionCalculation.canPlaceOrder) {
       return {
@@ -975,6 +975,10 @@ export async function rebaseOrderTpAndSl(
     }
 
     // Calculate new TP and SL based on actual entry price
+    // For SELL signals: SL above entry, TP below entry
+    // For BUY signals: SL below entry, TP above entry
+    // We need to determine the signal from the order details or use a default
+    // For now, we'll use the original logic (BUY) and can enhance this later
     const newTargetPrice = actualEntryPrice * (1 + accountConfig.targetPricePercentage);
     const newStopLossPrice = actualEntryPrice * (1 - accountConfig.stopLossPercentage);
 

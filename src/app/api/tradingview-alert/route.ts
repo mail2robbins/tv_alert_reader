@@ -148,9 +148,10 @@ export async function POST(request: NextRequest) {
       // Don't fail the webhook if forwarding fails
     }
     
-    // Auto-place orders if enabled and signal is BUY
+    // Auto-place orders if enabled and signal is BUY (or SELL if enabled)
     let orderResult = null;
     const autoPlaceOrder = process.env.AUTO_PLACE_ORDER === 'true';
+    const autoPlaceSellOrder = process.env.AUTO_PLACE_SELL_ORDER === 'true';
     
     if (autoPlaceOrder) {
       const allOrders: PlacedOrder[] = [];
@@ -161,9 +162,9 @@ export async function POST(request: NextRequest) {
         const alert = processedAlerts[i];
         const alertId = alertIds[i];
         
-        if (alert.signal === 'BUY') {
+        if (alert.signal === 'BUY' || (alert.signal === 'SELL' && autoPlaceSellOrder)) {
           try {
-            console.log('Auto-placing order for BUY signal:', alert.ticker);
+            console.log(`Auto-placing order for ${alert.signal} signal:`, alert.ticker);
             
             // Check if ticker has already been ordered today
             if (await hasTickerBeenOrderedToday(alert.ticker)) {
@@ -171,7 +172,7 @@ export async function POST(request: NextRequest) {
               await logError('Order blocked - duplicate ticker', new Error(`Ticker ${alert.ticker} already ordered today`));
             } else {
               // Calculate position sizes for all accounts using multi-account fund management
-              const positionCalculations = calculatePositionSizesForAllAccounts(alert.price);
+              const positionCalculations = calculatePositionSizesForAllAccounts(alert.price, alert.signal);
               const validCalculations = positionCalculations.filter(calc => calc.canPlaceOrder);
             
               if (validCalculations.length === 0) {

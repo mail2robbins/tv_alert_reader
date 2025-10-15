@@ -98,7 +98,8 @@ export function updateFundConfig(newConfig: Partial<FundConfig>): FundConfig {
 // Calculate position size based on available funds, leverage, and stock price
 export function calculatePositionSize(
   stockPrice: number,
-  customConfig?: Partial<FundConfig>
+  customConfig?: Partial<FundConfig>,
+  signal?: 'BUY' | 'SELL' | 'HOLD'
 ): PositionCalculation {
   const config = { ...DEFAULT_FUND_CONFIG, ...customConfig };
   
@@ -120,8 +121,21 @@ export function calculatePositionSize(
   const positionSizePercentage = (leveragedValue / config.availableFunds) * 100;
   
   // Calculate stop loss and target prices with 2 decimal places
-  const stopLossPrice = Math.round(stockPrice * (1 - config.stopLossPercentage) * 100) / 100;
-  const targetPrice = Math.round(stockPrice * (1 + config.targetPricePercentage) * 100) / 100;
+  // For BUY signals: SL below entry, TP above entry
+  // For SELL signals: SL above entry, TP below entry
+  let stopLossPrice: number;
+  let targetPrice: number;
+  
+  if (signal === 'SELL') {
+    // SELL signal: Stop loss above entry (to limit losses if price goes up)
+    // Target price below entry (to capture profit if price goes down)
+    stopLossPrice = Math.round(stockPrice * (1 + config.stopLossPercentage) * 100) / 100;
+    targetPrice = Math.round(stockPrice * (1 - config.targetPricePercentage) * 100) / 100;
+  } else {
+    // BUY signal (default): Stop loss below entry, target price above entry
+    stopLossPrice = Math.round(stockPrice * (1 - config.stopLossPercentage) * 100) / 100;
+    targetPrice = Math.round(stockPrice * (1 + config.targetPricePercentage) * 100) / 100;
+  }
   
   // Determine if order can be placed
   let canPlaceOrder = true;
@@ -186,7 +200,8 @@ export function calculatePositionSize(
 // Calculate position size for a specific account
 export function calculatePositionSizeForAccount(
   stockPrice: number,
-  accountConfig: DhanAccountConfig
+  accountConfig: DhanAccountConfig,
+  signal?: 'BUY' | 'SELL' | 'HOLD'
 ): PositionCalculation {
   const fundConfig: FundConfig = {
     availableFunds: accountConfig.availableFunds,
@@ -199,7 +214,7 @@ export function calculatePositionSizeForAccount(
     riskOnCapital: accountConfig.riskOnCapital
   };
   
-  const calculation = calculatePositionSize(stockPrice, fundConfig);
+  const calculation = calculatePositionSize(stockPrice, fundConfig, signal);
   
   // Add account information to the calculation
   return {
@@ -211,12 +226,13 @@ export function calculatePositionSizeForAccount(
 
 // Calculate position sizes for all active accounts
 export function calculatePositionSizesForAllAccounts(
-  stockPrice: number
+  stockPrice: number,
+  signal?: 'BUY' | 'SELL' | 'HOLD'
 ): Array<PositionCalculation & { accountConfig: DhanAccountConfig }> {
   const activeAccounts: DhanAccountConfig[] = getActiveAccountConfigurations();
   
   return activeAccounts.map((accountConfig: DhanAccountConfig) => ({
-    ...calculatePositionSizeForAccount(stockPrice, accountConfig),
+    ...calculatePositionSizeForAccount(stockPrice, accountConfig, signal),
     accountConfig
   }));
 }
