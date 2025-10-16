@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateTradingViewAlert, validateChartInkAlert, processChartInkAlert, validateWebhookSecret, getAlertSource } from '@/lib/validation';
 import { logAlert, logError } from '@/lib/fileLogger';
-import { placeDhanOrderOnAllAccounts, rebaseOrderTpAndSl } from '@/lib/dhanApi';
+import { placeDhanOrderOnAllAccounts } from '@/lib/dhanApi';
+import { rebaseQueueManager } from '@/lib/rebaseQueueManager';
 import { storeMultiplePlacedOrders, hasTickerBeenOrderedToday, PlacedOrder } from '@/lib/orderTracker';
 import { calculatePositionSizesForAllAccounts } from '@/lib/fundManager';
 import { forwardAlertToExternalWebhooks } from '@/lib/externalWebhookForwarder';
@@ -194,46 +195,20 @@ export async function POST(request: NextRequest) {
                   positionCalculations
                 );
                 
-                // Rebase TP/SL for successful orders if configured
-                const rebaseResults = [];
+                // Add successful orders to rebase queue for delayed processing
                 for (const dhanResponse of dhanResponses) {
-                  if (dhanResponse.success && dhanResponse.orderId && dhanResponse.accountId) {
+                  if (dhanResponse.success && dhanResponse.orderId && dhanResponse.accountId && dhanResponse.clientId) {
                     const accountConfig = getAccountConfiguration(dhanResponse.accountId);
                     if (accountConfig && accountConfig.rebaseTpAndSl) {
-                      console.log(`🔄 Initiating TP/SL rebase for order ${dhanResponse.orderId} on account ${dhanResponse.clientId}`);
+                      console.log(`📝 Adding order ${dhanResponse.orderId} to rebase queue for account ${dhanResponse.clientId}`);
                       
-                      try {
-                        // Add a small delay to ensure order is processed
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                        
-                        const rebaseResult = await rebaseOrderTpAndSl(
-                          dhanResponse.orderId,
-                          accountConfig,
-                          alert.price
-                        );
-                        
-                        rebaseResults.push({
-                          orderId: dhanResponse.orderId,
-                          accountId: dhanResponse.accountId,
-                          clientId: dhanResponse.clientId,
-                          ...rebaseResult
-                        });
-                        
-                        if (rebaseResult.success) {
-                          console.log(`✅ TP/SL rebase successful for order ${dhanResponse.orderId}`);
-                        } else {
-                          console.error(`❌ TP/SL rebase failed for order ${dhanResponse.orderId}: ${rebaseResult.error}`);
-                        }
-                      } catch (error) {
-                        console.error(`❌ Error during TP/SL rebase for order ${dhanResponse.orderId}:`, error);
-                        rebaseResults.push({
-                          orderId: dhanResponse.orderId,
-                          accountId: dhanResponse.accountId,
-                          clientId: dhanResponse.clientId,
-                          success: false,
-                          error: error instanceof Error ? error.message : 'Unknown error during rebase'
-                        });
-                      }
+                      rebaseQueueManager.addToQueue(
+                        dhanResponse.orderId,
+                        accountConfig,
+                        alert.price,
+                        dhanResponse.clientId,
+                        dhanResponse.accountId.toString()
+                      );
                     }
                   }
                 }
@@ -247,7 +222,7 @@ export async function POST(request: NextRequest) {
                   successfulOrders: placedOrders.filter(order => order.status === 'placed').length,
                   failedOrders: placedOrders.filter(order => order.status === 'failed').length,
                   accountsUsed: validCalculations.length,
-                  rebaseResults: rebaseResults.length > 0 ? rebaseResults : undefined
+                  rebaseQueued: rebaseQueueManager.getQueueStatus().queueLength
                 });
               }
             }
@@ -293,7 +268,8 @@ export async function POST(request: NextRequest) {
             successfulForwards: forwardingResult.successfulForwards,
             failedForwards: forwardingResult.failedForwards,
             results: forwardingResult.results
-          } : null
+          } : null,
+          rebaseQueueStatus: rebaseQueueManager.getQueueStatus()
         }
       } as ApiResponse<{ 
         alertIds: string[]; 
@@ -312,6 +288,7 @@ export async function POST(request: NextRequest) {
           failedForwards: number;
           results: unknown[];
         } | null;
+        rebaseQueueStatus: { queueLength: number; processing: boolean; resultsCount: number };
       }>,
       { 
         status: 200,

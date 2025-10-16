@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { placeDhanOrder, placeDhanOrderOnAllAccounts, rebaseOrderTpAndSl } from '@/lib/dhanApi';
+import { placeDhanOrder, placeDhanOrderOnAllAccounts } from '@/lib/dhanApi';
+import { rebaseQueueManager } from '@/lib/rebaseQueueManager';
 import { storePlacedOrder, storeMultiplePlacedOrders, hasTickerBeenOrderedToday } from '@/lib/orderTracker';
 import { calculatePositionSize, calculatePositionSizesForAllAccounts } from '@/lib/fundManager';
 import { logError } from '@/lib/fileLogger';
@@ -67,46 +68,20 @@ export async function POST(request: NextRequest) {
         const successfulOrders = placedOrders.filter(order => order.status === 'placed');
         const failedOrders = placedOrders.filter(order => order.status === 'failed');
 
-        // Rebase TP/SL for successful orders if configured
-        const rebaseResults = [];
+        // Add successful orders to rebase queue for delayed processing
         for (const dhanResponse of dhanResponses) {
-          if (dhanResponse.success && dhanResponse.orderId && dhanResponse.accountId) {
+          if (dhanResponse.success && dhanResponse.orderId && dhanResponse.accountId && dhanResponse.clientId) {
             const accountConfig = getAccountConfiguration(dhanResponse.accountId);
             if (accountConfig && accountConfig.rebaseTpAndSl) {
-              console.log(`🔄 Initiating TP/SL rebase for order ${dhanResponse.orderId} on account ${dhanResponse.clientId}`);
+              console.log(`📝 Adding order ${dhanResponse.orderId} to rebase queue for account ${dhanResponse.clientId}`);
               
-              try {
-                // Add a small delay to ensure order is processed
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                
-                const rebaseResult = await rebaseOrderTpAndSl(
-                  dhanResponse.orderId,
-                  accountConfig,
-                  alert.price
-                );
-                
-                rebaseResults.push({
-                  orderId: dhanResponse.orderId,
-                  accountId: dhanResponse.accountId,
-                  clientId: dhanResponse.clientId,
-                  ...rebaseResult
-                });
-                
-                if (rebaseResult.success) {
-                  console.log(`✅ TP/SL rebase successful for order ${dhanResponse.orderId}`);
-                } else {
-                  console.error(`❌ TP/SL rebase failed for order ${dhanResponse.orderId}: ${rebaseResult.error}`);
-                }
-              } catch (error) {
-                console.error(`❌ Error during TP/SL rebase for order ${dhanResponse.orderId}:`, error);
-                rebaseResults.push({
-                  orderId: dhanResponse.orderId,
-                  accountId: dhanResponse.accountId,
-                  clientId: dhanResponse.clientId,
-                  success: false,
-                  error: error instanceof Error ? error.message : 'Unknown error during rebase'
-                });
-              }
+              rebaseQueueManager.addToQueue(
+                dhanResponse.orderId,
+                accountConfig,
+                alert.price,
+                dhanResponse.clientId,
+                dhanResponse.accountId.toString()
+              );
             }
           }
         }
@@ -117,29 +92,25 @@ export async function POST(request: NextRequest) {
             data: {
               orders: placedOrders,
               dhanResponses,
-              rebaseResults,
+              rebaseQueueStatus: rebaseQueueManager.getQueueStatus(),
               summary: {
                 totalOrders: placedOrders.length,
                 successfulOrders: successfulOrders.length,
                 failedOrders: failedOrders.length,
                 accountsUsed: validCalculations.length,
-                rebaseAttempted: rebaseResults.length,
-                rebaseSuccessful: rebaseResults.filter(r => r.success).length,
-                rebaseFailed: rebaseResults.filter(r => !r.success).length
+                rebaseQueued: rebaseQueueManager.getQueueStatus().queueLength
               }
             }
           } as ApiResponse<{ 
             orders: typeof placedOrders; 
             dhanResponses: typeof dhanResponses;
-            rebaseResults: typeof rebaseResults;
+            rebaseQueueStatus: { queueLength: number; processing: boolean; resultsCount: number };
             summary: {
               totalOrders: number;
               successfulOrders: number;
               failedOrders: number;
               accountsUsed: number;
-              rebaseAttempted: number;
-              rebaseSuccessful: number;
-              rebaseFailed: number;
+              rebaseQueued: number;
             };
           }>,
           { status: 200 }
@@ -218,30 +189,20 @@ export async function POST(request: NextRequest) {
         };
 
         if (legacyAccountConfig.rebaseTpAndSl) {
-          console.log(`🔄 Initiating TP/SL rebase for legacy order ${dhanResponse.orderId}`);
+          console.log(`📝 Adding legacy order ${dhanResponse.orderId} to rebase queue`);
           
-          try {
-            // Add a small delay to ensure order is processed
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            rebaseResult = await rebaseOrderTpAndSl(
-              dhanResponse.orderId,
-              legacyAccountConfig,
-              alert.price
-            );
-            
-            if (rebaseResult.success) {
-              console.log(`✅ TP/SL rebase successful for legacy order ${dhanResponse.orderId}`);
-            } else {
-              console.error(`❌ TP/SL rebase failed for legacy order ${dhanResponse.orderId}: ${rebaseResult.error}`);
-            }
-          } catch (error) {
-            console.error(`❌ Error during TP/SL rebase for legacy order ${dhanResponse.orderId}:`, error);
-            rebaseResult = {
-              success: false,
-              error: error instanceof Error ? error.message : 'Unknown error during rebase'
-            };
-          }
+          rebaseQueueManager.addToQueue(
+            dhanResponse.orderId,
+            legacyAccountConfig,
+            alert.price,
+            legacyAccountConfig.clientId,
+            'legacy'
+          );
+          
+          rebaseResult = {
+            success: true,
+            message: 'Order added to rebase queue for delayed processing'
+          };
         }
       }
 
