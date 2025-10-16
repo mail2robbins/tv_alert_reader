@@ -273,6 +273,17 @@ export default function Home() {
                 Monitor and analyze your TradingView alerts in real-time
               </p>
             </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => window.location.href = '/manual-order'}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center gap-2"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Manual Order Placement
+              </button>
+            </div>
             {/* <button
               onClick={handleLoadData}
               disabled={isLoading}

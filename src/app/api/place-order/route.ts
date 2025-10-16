@@ -1,15 +1,155 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { placeDhanOrder, placeDhanOrderOnAllAccounts } from '@/lib/dhanApi';
+import { placeDhanOrder, placeDhanOrderOnAllAccounts, placeDhanOrderForAccount } from '@/lib/dhanApi';
 import { rebaseQueueManager } from '@/lib/rebaseQueueManager';
 import { storePlacedOrder, storeMultiplePlacedOrders, hasTickerBeenOrderedToday } from '@/lib/orderTracker';
 import { calculatePositionSize, calculatePositionSizesForAllAccounts } from '@/lib/fundManager';
 import { logError } from '@/lib/fileLogger';
 import { getAccountConfiguration } from '@/lib/multiAccountManager';
 import { ApiResponse } from '@/types/alert';
+import { TradingViewAlert } from '@/types/alert';
+
+// Handle manual order placement
+async function handleManualOrder(body: {
+  accountId: number;
+  orderType: 'BUY' | 'SELL';
+  ticker: string;
+  currentPrice: number;
+}) {
+  try {
+    const { accountId, orderType, ticker, currentPrice } = body;
+
+    // Get account configuration
+    const accountConfig = getAccountConfiguration(accountId);
+    if (!accountConfig) {
+      return NextResponse.json(
+        { success: false, error: `Account ${accountId} not found or not configured` } as ApiResponse<null>,
+        { status: 400 }
+      );
+    }
+
+    // Create a mock TradingView alert for the manual order
+    const manualAlert: TradingViewAlert = {
+      ticker: ticker.toUpperCase(),
+      signal: orderType,
+      price: currentPrice,
+      timestamp: new Date().toISOString(),
+      strategy: 'Manual Order',
+      custom_note: `Manual ${orderType} order for ${ticker} at ₹${currentPrice}`
+    };
+
+    console.log(`📝 Placing manual order:`, {
+      accountId,
+      orderType,
+      ticker,
+      currentPrice,
+      accountConfig: {
+        clientId: accountConfig.clientId,
+        availableFunds: accountConfig.availableFunds,
+        leverage: accountConfig.leverage
+      }
+    });
+
+    // Place order using the existing function
+    const dhanResponse = await placeDhanOrderForAccount(manualAlert, accountConfig, {
+      useAutoPositionSizing: true,
+      exchangeSegment: 'NSE_EQ',
+      productType: 'CNC',
+      orderType: 'MARKET'
+    });
+
+    // Store the order
+    const manualOrderId = `manual_${Date.now()}`;
+    const placedOrder = await storePlacedOrder(
+      manualAlert, 
+      manualOrderId, 
+      dhanResponse.success ? 1 : 0, // We don't know the exact quantity here, but it's stored in the order
+      dhanResponse, 
+      undefined // No position calculation for manual orders
+    );
+
+    // Add to rebase queue if successful and rebasing is enabled
+    let rebaseResult = null;
+    if (dhanResponse.success && dhanResponse.orderId && accountConfig.rebaseTpAndSl) {
+      console.log(`📝 Adding manual order ${dhanResponse.orderId} to rebase queue for account ${accountConfig.clientId}`);
+      
+      rebaseQueueManager.addToQueue(
+        dhanResponse.orderId,
+        accountConfig,
+        currentPrice,
+        accountConfig.clientId,
+        accountId.toString(),
+        orderType
+      );
+      
+      rebaseResult = {
+        success: true,
+        message: 'Order added to rebase queue for delayed processing'
+      };
+    }
+
+    return NextResponse.json(
+      { 
+        success: true, 
+        data: {
+          order: placedOrder,
+          dhanResponse,
+          rebaseResult,
+          manualOrder: {
+            accountId,
+            orderType,
+            ticker,
+            currentPrice,
+            accountConfig: {
+              clientId: accountConfig.clientId,
+              availableFunds: accountConfig.availableFunds,
+              leverage: accountConfig.leverage,
+              stopLossPercentage: accountConfig.stopLossPercentage,
+              targetPricePercentage: accountConfig.targetPricePercentage,
+              riskOnCapital: accountConfig.riskOnCapital
+            }
+          }
+        }
+      } as ApiResponse<{ 
+        order: typeof placedOrder; 
+        dhanResponse: typeof dhanResponse;
+        rebaseResult: typeof rebaseResult;
+        manualOrder: {
+          accountId: number;
+          orderType: string;
+          ticker: string;
+          currentPrice: number;
+          accountConfig: {
+            clientId: string;
+            availableFunds: number;
+            leverage: number;
+            stopLossPercentage: number;
+            targetPricePercentage: number;
+            riskOnCapital: number;
+          };
+        };
+      }>,
+      { status: 200 }
+    );
+
+  } catch (error) {
+    console.error('Manual order placement failed:', error);
+    return NextResponse.json(
+      { success: false, error: `Manual order placement failed: ${error instanceof Error ? error.message : String(error)}` } as ApiResponse<null>,
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    
+    // Check if this is a manual order request
+    if (body.accountId && body.orderType && body.ticker && body.currentPrice) {
+      return handleManualOrder(body);
+    }
+    
+    // Original TradingView alert logic
     const { alert, quantity, orderConfig, useAutoPositionSizing = true, useMultiAccount = true } = body;
 
     // Validate required fields
