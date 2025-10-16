@@ -12,6 +12,8 @@ import FundManager from '@/components/FundManager';
 import AccountConfigCard from '@/components/AccountConfigCard';
 import ExternalWebhookConfig from '@/components/ExternalWebhookConfig';
 import TickerInput from '@/components/TickerInput';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
 import { PlacedOrder } from '@/lib/orderTracker';
 
 interface Stats {
@@ -23,6 +25,7 @@ interface Stats {
 }
 
 export default function Home() {
+  const { user, logout } = useAuth();
   const [alerts, setAlerts] = useState<AlertLogEntry[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [orders, setOrders] = useState<PlacedOrder[]>([]);
@@ -251,61 +254,55 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <svg className="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 32 32">
-                  <rect width="32" height="32" rx="6" fill="currentColor"/>
-                  <path d="M4 24 L8 20 L12 22 L16 16 L20 18 L24 12 L28 14" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                  <circle cx="8" cy="20" r="2" fill="#10b981"/>
-                  <circle cx="16" cy="16" r="2" fill="#10b981"/>
-                  <circle cx="24" cy="12" r="2" fill="#10b981"/>
-                  <path d="M24 6 C24.5 6 25 6.5 25 7 L25 9 C25 9.5 24.5 10 24 10 L22 10 C21.5 10 21 9.5 21 9 L21 7 C21 6.5 21.5 6 22 6 L24 6 Z" fill="#f59e0b"/>
-                  <circle cx="26" cy="4" r="2" fill="#ef4444"/>
-                </svg>
-                TradingView Alert Reader
-              </h1>
-              <p className="mt-2 text-gray-600">
-                Monitor and analyze your TradingView alerts in real-time
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => window.location.href = '/manual-order'}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center gap-2"
-              >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Manual Order Placement
-              </button>
-            </div>
-            {/* <button
-              onClick={handleLoadData}
-              disabled={isLoading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {isLoading ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    <ProtectedRoute requireApproval={true}>
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                  <svg className="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 32 32">
+                    <rect width="32" height="32" rx="6" fill="currentColor"/>
+                    <path d="M4 24 L8 20 L12 22 L16 16 L20 18 L24 12 L28 14" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                    <circle cx="8" cy="20" r="2" fill="#10b981"/>
+                    <circle cx="16" cy="16" r="2" fill="#10b981"/>
+                    <circle cx="24" cy="12" r="2" fill="#10b981"/>
+                    <path d="M24 6 C24.5 6 25 6.5 25 7 L25 9 C25 9.5 24.5 10 24 10 L22 10 C21.5 10 21 9.5 21 9 L21 7 C21 6.5 21.5 6 22 6 L24 6 Z" fill="#f59e0b"/>
+                    <circle cx="26" cy="4" r="2" fill="#ef4444"/>
                   </svg>
-                  Loading...
-                </>
-              ) : (
-                <>
+                  TradingView Alert Reader
+                </h1>
+                <p className="mt-2 text-gray-600">
+                  Monitor and analyze your TradingView alerts in real-time
+                </p>
+                {user && (
+                  <p className="mt-1 text-sm text-gray-500">
+                    Welcome, {user.fullName} ({user.username})
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => window.location.href = '/manual-order'}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center gap-2"
+                >
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
-                  Refresh
-                </>
-              )}
-            </button> */}
+                  Manual Order Placement
+                </button>
+                <button
+                  onClick={logout}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center gap-2"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Logout
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -586,6 +583,6 @@ export default function Home() {
           </p>
         </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }

@@ -15,12 +15,16 @@
     "test:db": "ts-node --project scripts/tsconfig.json scripts/test-db-connection.ts"
   },
   "dependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/pg": "^8.15.5",
     "@types/react-datepicker": "^6.2.0",
+    "bcryptjs": "^3.0.2",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "dotenv": "^17.2.3",
     "express-rate-limit": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
     "next": "15.5.3",
     "pg": "^8.16.3",
     "react": "19.1.0",

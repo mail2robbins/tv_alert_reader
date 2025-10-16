@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { DhanAccountConfig } from '@/lib/multiAccountManager';
 
 interface ManualOrderForm {
@@ -15,6 +16,7 @@ interface ManualOrderPlacementProps {
 }
 
 export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlacementProps) {
+  const { token } = useAuth();
   const [formData, setFormData] = useState<ManualOrderForm>({
     accountId: '',
     orderType: 'BUY',
@@ -97,6 +99,7 @@ export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlace
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
         },
         body: JSON.stringify({
           accountId: parseInt(formData.accountId),

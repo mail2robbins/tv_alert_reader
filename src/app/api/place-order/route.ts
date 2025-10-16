@@ -5,6 +5,8 @@ import { storePlacedOrder, storeMultiplePlacedOrders, hasTickerBeenOrderedToday 
 import { calculatePositionSize, calculatePositionSizesForAllAccounts } from '@/lib/fundManager';
 import { logError } from '@/lib/fileLogger';
 import { getAccountConfiguration } from '@/lib/multiAccountManager';
+import { extractTokenFromHeader, verifyToken } from '@/lib/auth';
+import { findUserById } from '@/lib/userDatabase';
 import { ApiResponse } from '@/types/alert';
 import { TradingViewAlert } from '@/types/alert';
 
@@ -14,8 +16,36 @@ async function handleManualOrder(body: {
   orderType: 'BUY' | 'SELL';
   ticker: string;
   currentPrice: number;
-}) {
+}, request: NextRequest) {
   try {
+    // Verify user authentication for manual orders
+    const authHeader = request.headers.get('authorization');
+    const token = extractTokenFromHeader(authHeader);
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required for manual orders' } as ApiResponse<null>,
+        { status: 401 }
+      );
+    }
+
+    const payload = verifyToken(token);
+    if (!payload) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid or expired token' } as ApiResponse<null>,
+        { status: 401 }
+      );
+    }
+
+    // Verify user exists and is approved
+    const user = await findUserById(payload.userId);
+    if (!user || !user.isApproved || !user.isActive) {
+      return NextResponse.json(
+        { success: false, error: 'User not authorized to place manual orders' } as ApiResponse<null>,
+        { status: 403 }
+      );
+    }
+
     const { accountId, orderType, ticker, currentPrice } = body;
 
     // Get account configuration
@@ -146,7 +176,7 @@ export async function POST(request: NextRequest) {
     
     // Check if this is a manual order request
     if (body.accountId && body.orderType && body.ticker && body.currentPrice) {
-      return handleManualOrder(body);
+      return handleManualOrder(body, request);
     }
     
     // Original TradingView alert logic
