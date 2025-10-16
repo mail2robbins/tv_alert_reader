@@ -80,7 +80,8 @@ export async function POST(request: NextRequest) {
                 accountConfig,
                 alert.price,
                 dhanResponse.clientId,
-                dhanResponse.accountId.toString()
+                dhanResponse.accountId.toString(),
+                alert.signal
               );
             }
           }
@@ -196,7 +197,8 @@ export async function POST(request: NextRequest) {
             legacyAccountConfig,
             alert.price,
             legacyAccountConfig.clientId,
-            'legacy'
+            'legacy',
+            alert.signal
           );
           
           rebaseResult = {

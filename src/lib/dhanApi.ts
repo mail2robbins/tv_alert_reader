@@ -792,7 +792,8 @@ export async function updateDhanOrderStopLoss(
 export async function rebaseOrderTpAndSl(
   orderId: string,
   accountConfig: DhanAccountConfig,
-  originalAlertPrice: number
+  originalAlertPrice: number,
+  signal: 'BUY' | 'SELL' = 'BUY'
 ): Promise<{
   success: boolean;
   message?: string;
@@ -974,15 +975,22 @@ export async function rebaseOrderTpAndSl(
       };
     }
 
-    // Calculate new TP and SL based on actual entry price
-    // For SELL signals: SL above entry, TP below entry
-    // For BUY signals: SL below entry, TP above entry
-    // We need to determine the signal from the order details or use a default
-    // For now, we'll use the original logic (BUY) and can enhance this later
-    const newTargetPrice = actualEntryPrice * (1 + accountConfig.targetPricePercentage);
-    const newStopLossPrice = actualEntryPrice * (1 - accountConfig.stopLossPercentage);
+    // Calculate new TP and SL based on actual entry price and signal type
+    let newTargetPrice: number;
+    let newStopLossPrice: number;
+    
+    if (signal === 'SELL') {
+      // For SELL signals: SL above entry (to limit losses if price goes up), TP below entry (to capture profit if price goes down)
+      newTargetPrice = actualEntryPrice * (1 - accountConfig.targetPricePercentage);
+      newStopLossPrice = actualEntryPrice * (1 + accountConfig.stopLossPercentage);
+    } else {
+      // For BUY signals: SL below entry (to limit losses if price goes down), TP above entry (to capture profit if price goes up)
+      newTargetPrice = actualEntryPrice * (1 + accountConfig.targetPricePercentage);
+      newStopLossPrice = actualEntryPrice * (1 - accountConfig.stopLossPercentage);
+    }
 
-    console.log(`🎯 Recalculating TP/SL:`, {
+    console.log(`🎯 Recalculating TP/SL for ${signal} signal:`, {
+      signal,
       originalAlertPrice,
       actualEntryPrice,
       priceDifferencePercentage: priceDifferencePercentage.toFixed(2) + '%',

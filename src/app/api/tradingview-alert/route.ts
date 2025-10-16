@@ -207,7 +207,8 @@ export async function POST(request: NextRequest) {
                         accountConfig,
                         alert.price,
                         dhanResponse.clientId,
-                        dhanResponse.accountId.toString()
+                        dhanResponse.accountId.toString(),
+                        alert.signal
                       );
                     }
                   }

@@ -7,6 +7,7 @@ export interface RebaseQueueItem {
   originalAlertPrice: number;
   clientId: string;
   accountId: string;
+  signal: 'BUY' | 'SELL';
   addedAt: number;
   attempts: number;
   maxAttempts: number;
@@ -45,7 +46,8 @@ class RebaseQueueManager {
     accountConfig: DhanAccountConfig,
     originalAlertPrice: number,
     clientId: string,
-    accountId: string
+    accountId: string,
+    signal: 'BUY' | 'SELL'
   ): void {
     // Check if rebasing is enabled for this account
     if (!accountConfig.rebaseTpAndSl) {
@@ -66,6 +68,7 @@ class RebaseQueueManager {
       originalAlertPrice,
       clientId,
       accountId,
+      signal,
       addedAt: Date.now(),
       attempts: 0,
       maxAttempts: this.MAX_ATTEMPTS
@@ -137,7 +140,8 @@ class RebaseQueueManager {
       const result = await rebaseOrderTpAndSl(
         item.orderId,
         item.accountConfig,
-        item.originalAlertPrice
+        item.originalAlertPrice,
+        item.signal
       );
 
       if (result.success) {
