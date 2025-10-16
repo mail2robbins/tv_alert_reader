@@ -75,7 +75,7 @@ export default function OrdersTable({ orders, isLoading }: OrdersTableProps) {
       <div className="px-6 py-4 border-b border-gray-200">
         <h3 className="text-lg font-medium text-gray-900">Placed Orders ({orders.length})</h3>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto max-h-96 overflow-y-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
