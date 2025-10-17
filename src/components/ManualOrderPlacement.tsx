@@ -7,6 +7,7 @@ import { DhanAccountConfig } from '@/lib/multiAccountManager';
 interface ManualOrderForm {
   accountId: string;
   orderType: 'BUY' | 'SELL';
+  executionType: 'MARKET' | 'LIMIT';
   ticker: string;
   currentPrice: number;
 }
@@ -20,6 +21,7 @@ export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlace
   const [formData, setFormData] = useState<ManualOrderForm>({
     accountId: '',
     orderType: 'BUY',
+    executionType: 'MARKET',
     ticker: '',
     currentPrice: 0
   });
@@ -104,6 +106,7 @@ export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlace
         body: JSON.stringify({
           accountId: parseInt(formData.accountId),
           orderType: formData.orderType,
+          executionType: formData.executionType,
           ticker: formData.ticker.trim().toUpperCase(),
           currentPrice: formData.currentPrice
         }),
@@ -118,6 +121,7 @@ export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlace
         setFormData({
           accountId: formData.accountId, // Keep selected account
           orderType: 'BUY',
+          executionType: 'MARKET',
           ticker: '',
           currentPrice: 0
         });
@@ -227,6 +231,28 @@ export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlace
             </select>
           </div>
 
+          {/* Execution Type */}
+          <div>
+            <label htmlFor="executionType" className="block text-sm font-medium text-gray-700 mb-2">
+              Execution Type
+            </label>
+            <select
+              id="executionType"
+              value={formData.executionType}
+              onChange={(e) => handleInputChange('executionType', e.target.value as 'MARKET' | 'LIMIT')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+            >
+              <option value="MARKET">MARKET - Execute at current market price</option>
+              <option value="LIMIT">LIMIT - Execute only at specified price or better</option>
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              {formData.executionType === 'MARKET' 
+                ? 'Order will execute immediately at the best available market price'
+                : 'Order will only execute at the price you specify or better'
+              }
+            </p>
+          </div>
+
           {/* Ticker Input */}
           <div>
             <label htmlFor="ticker" className="block text-sm font-medium text-gray-700 mb-2">
@@ -276,11 +302,11 @@ export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlace
                 </div>
                 <div>
                   <span className="text-gray-600">Stop Loss:</span>
-                  <span className="ml-2 font-semibold text-gray-900">{(selectedAccount.stopLossPercentage * 100).toFixed(1)}%</span>
+                  <span className="ml-2 font-semibold text-gray-900">{(selectedAccount.stopLossPercentage * 100).toFixed(2)}%</span>
                 </div>
                 <div>
                   <span className="text-gray-600">Target Price:</span>
-                  <span className="ml-2 font-semibold text-gray-900">{(selectedAccount.targetPricePercentage * 100).toFixed(1)}%</span>
+                  <span className="ml-2 font-semibold text-gray-900">{(selectedAccount.targetPricePercentage * 100).toFixed(2)}%</span>
                 </div>
                 <div>
                   <span className="text-gray-600">Risk on Capital:</span>

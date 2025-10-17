@@ -14,6 +14,7 @@ import { TradingViewAlert } from '@/types/alert';
 async function handleManualOrder(body: {
   accountId: number;
   orderType: 'BUY' | 'SELL';
+  executionType?: 'MARKET' | 'LIMIT';
   ticker: string;
   currentPrice: number;
 }, request: NextRequest) {
@@ -46,7 +47,7 @@ async function handleManualOrder(body: {
       );
     }
 
-    const { accountId, orderType, ticker, currentPrice } = body;
+    const { accountId, orderType, executionType, ticker, currentPrice } = body;
 
     // Get account configuration
     const accountConfig = getAccountConfiguration(accountId);
@@ -70,6 +71,7 @@ async function handleManualOrder(body: {
     console.log(`📝 Placing manual order:`, {
       accountId,
       orderType,
+      executionType,
       ticker,
       currentPrice,
       accountConfig: {
@@ -82,9 +84,9 @@ async function handleManualOrder(body: {
     // Place order using the existing function
     const dhanResponse = await placeDhanOrderForAccount(manualAlert, accountConfig, {
       useAutoPositionSizing: true,
-      exchangeSegment: 'NSE_EQ',
-      productType: 'CNC',
-      orderType: 'MARKET'
+      exchangeSegment: process.env.DHAN_EXCHANGE_SEGMENT || 'NSE_EQ',
+      productType: process.env.DHAN_PRODUCT_TYPE || 'CNC',
+      orderType: executionType || 'MARKET' // Use execution type from form, fallback to MARKET
     });
 
     // Store the order
@@ -127,6 +129,7 @@ async function handleManualOrder(body: {
           manualOrder: {
             accountId,
             orderType,
+            executionType,
             ticker,
             currentPrice,
             accountConfig: {
@@ -146,6 +149,7 @@ async function handleManualOrder(body: {
         manualOrder: {
           accountId: number;
           orderType: string;
+          executionType: string;
           ticker: string;
           currentPrice: number;
           accountConfig: {
