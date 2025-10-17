@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { AlertLogEntry } from '@/types/alert';
 import AlertTable from '@/components/AlertTable';
 import DateFilter from '@/components/DateFilter';
@@ -26,6 +27,7 @@ interface Stats {
 
 export default function Home() {
   const { user, logout } = useAuth();
+  const router = useRouter();
   const [alerts, setAlerts] = useState<AlertLogEntry[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [orders, setOrders] = useState<PlacedOrder[]>([]);
@@ -256,11 +258,11 @@ export default function Home() {
   return (
     <ProtectedRoute requireApproval={true}>
       <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-6xl mx-auto px-6 py-8">
           {/* Header */}
           <div className="mb-8">
-            <div className="flex justify-between items-start">
-              <div>
+            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+              <div className="flex-1">
                 <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
                   <svg className="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 32 32">
                     <rect width="32" height="32" rx="6" fill="currentColor"/>
@@ -282,10 +284,10 @@ export default function Home() {
                   </p>
                 )}
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3 lg:flex-shrink-0">
                 <button
-                  onClick={() => window.location.href = '/manual-order'}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center gap-2"
+                  onClick={() => router.push('/manual-order')}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center justify-center gap-2 text-sm"
                 >
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -294,7 +296,7 @@ export default function Home() {
                 </button>
                 <button
                   onClick={logout}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center gap-2"
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center justify-center gap-2 text-sm"
                 >
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
