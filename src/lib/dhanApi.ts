@@ -627,13 +627,23 @@ export async function getDhanOrderDetails(orderId: string, accessToken: string):
   try {
     console.log(`🔍 Fetching order details for orderId: ${orderId}`);
     
+    // Create AbortController for timeout handling
+    const controller = new AbortController();
+    const timeoutMs = parseInt(process.env.DHAN_API_TIMEOUT_MS || '10000');
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    
     const response = await fetch(`https://api.dhan.co/v2/orders/${orderId}`, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
         'access-token': accessToken
-      }
+      },
+      signal: controller.signal,
+      // Add connection keep-alive and retry settings
+      keepalive: true
     });
+    
+    clearTimeout(timeoutId);
 
     console.log(`📡 Response status: ${response.status} ${response.statusText}`);
 
@@ -684,6 +694,18 @@ export async function getDhanOrderDetails(orderId: string, accessToken: string):
     }
   } catch (error) {
     console.error('❌ Error fetching order details:', error);
+    
+    // Handle specific network errors
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout: Order details fetch took too long');
+      } else if (error.message.includes('fetch failed') || error.message.includes('UND_ERR_SOCKET')) {
+        throw new Error('Network connection failed: Unable to connect to Dhan API');
+      } else if (error.message.includes('other side closed')) {
+        throw new Error('Connection closed by server: Dhan API connection was terminated');
+      }
+    }
+    
     throw error;
   }
 }
@@ -840,8 +862,8 @@ export async function rebaseOrderTpAndSl(
     console.log(`🔄 Starting TP/SL rebase for order ${orderId} on account ${accountConfig.clientId}`);
     
     // Retry logic to wait for order execution
-    const maxRetries = 5;
-    const retryDelay = 3000; // 3 seconds between retries
+  const maxRetries = parseInt(process.env.REBASE_MAX_RETRIES || '5');
+  const retryDelay = parseInt(process.env.REBASE_RETRY_DELAY_MS || '3000'); // milliseconds between retries
     let orderDetails: DhanOrderDetails | null = null;
     let actualEntryPrice: number | null = null;
     
@@ -922,6 +944,23 @@ export async function rebaseOrderTpAndSl(
         }
       } catch (error) {
         console.error(`❌ Error fetching order details on attempt ${attempt}:`, error);
+        
+        // Handle network errors more gracefully
+        if (error instanceof Error) {
+          if (error.message.includes('Network connection failed') || 
+              error.message.includes('Connection closed by server') ||
+              error.message.includes('Request timeout')) {
+            console.log(`🌐 Network error detected on attempt ${attempt}, will retry with exponential backoff`);
+            if (attempt < maxRetries) {
+              // Use exponential backoff for network errors
+              const backoffDelay = retryDelay * Math.pow(2, attempt - 1);
+              console.log(`⏳ Retrying in ${backoffDelay}ms due to network error...`);
+              await new Promise(resolve => setTimeout(resolve, backoffDelay));
+              continue;
+            }
+          }
+        }
+        
         if (attempt < maxRetries) {
           await new Promise(resolve => setTimeout(resolve, retryDelay));
           continue;
