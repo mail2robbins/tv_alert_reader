@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
     const user = await createUser(sanitizedData);
 
     // Remove sensitive data from response
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { isApproved, ...userResponse } = user;
 
     return NextResponse.json(

@@ -1,5 +1,5 @@
 import { getDatabaseConnection } from './database';
-import { User, UserSession, UserAuditLog, LoginRequest, RegisterRequest } from '@/types/auth';
+import { User, UserSession, RegisterRequest } from '@/types/auth';
 import { hashPassword, verifyPassword, generateTokenHash, getTokenExpirationDate } from './auth';
 
 /**
@@ -12,17 +12,18 @@ export async function createUser(userData: RegisterRequest): Promise<User> {
     const hashedPassword = await hashPassword(userData.password);
     
     const result = await client.query(`
-      INSERT INTO users (username, email, password_hash, full_name, is_approved, is_active)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO users (username, email, password_hash, full_name, is_approved, is_active, dhan_client_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING id, username, email, full_name as "fullName", is_approved as "isApproved", 
-                is_active as "isActive", created_at as "createdAt", updated_at as "updatedAt"
+                is_active as "isActive", dhan_client_id as "dhanClientId", created_at as "createdAt", updated_at as "updatedAt"
     `, [
       userData.username,
       userData.email,
       hashedPassword,
       userData.fullName,
       false, // New users need manual approval
-      true   // Account is active but not approved
+      true,  // Account is active but not approved
+      null   // DHAN client ID will be set by admin during approval
     ]);
     
     const user = result.rows[0];
@@ -51,7 +52,7 @@ export async function findUserByUsername(username: string): Promise<User | null>
   try {
     const result = await client.query(`
       SELECT id, username, email, full_name as "fullName", is_approved as "isApproved",
-             is_active as "isActive", created_at as "createdAt", updated_at as "updatedAt",
+             is_active as "isActive", dhan_client_id as "dhanClientId", created_at as "createdAt", updated_at as "updatedAt",
              last_login as "lastLogin"
       FROM users 
       WHERE username = $1 AND is_active = true
@@ -75,7 +76,7 @@ export async function findUserByEmail(email: string): Promise<User | null> {
   try {
     const result = await client.query(`
       SELECT id, username, email, full_name as "fullName", is_approved as "isApproved",
-             is_active as "isActive", created_at as "createdAt", updated_at as "updatedAt",
+             is_active as "isActive", dhan_client_id as "dhanClientId", created_at as "createdAt", updated_at as "updatedAt",
              last_login as "lastLogin"
       FROM users 
       WHERE email = $1 AND is_active = true
@@ -99,7 +100,7 @@ export async function findUserById(id: number): Promise<User | null> {
   try {
     const result = await client.query(`
       SELECT id, username, email, full_name as "fullName", is_approved as "isApproved",
-             is_active as "isActive", created_at as "createdAt", updated_at as "updatedAt",
+             is_active as "isActive", dhan_client_id as "dhanClientId", created_at as "createdAt", updated_at as "updatedAt",
              last_login as "lastLogin"
       FROM users 
       WHERE id = $1 AND is_active = true
@@ -123,7 +124,7 @@ export async function verifyUserCredentials(username: string, password: string):
   try {
     const result = await client.query(`
       SELECT id, username, email, full_name as "fullName", is_approved as "isApproved",
-             is_active as "isActive", created_at as "createdAt", updated_at as "updatedAt",
+             is_active as "isActive", dhan_client_id as "dhanClientId", created_at as "createdAt", updated_at as "updatedAt",
              last_login as "lastLogin", password_hash
       FROM users 
       WHERE username = $1 AND is_active = true
@@ -304,49 +305,26 @@ export async function logUserAction(
   }
 }
 
+
+
 /**
- * Get all pending user approvals
+ * Find user by DHAN client ID
  */
-export async function getPendingApprovals(): Promise<User[]> {
+export async function findUserByDhanClientId(dhanClientId: string): Promise<User | null> {
   const client = await getDatabaseConnection();
   
   try {
     const result = await client.query(`
       SELECT id, username, email, full_name as "fullName", is_approved as "isApproved",
-             is_active as "isActive", created_at as "createdAt", updated_at as "updatedAt"
+             is_active as "isActive", dhan_client_id as "dhanClientId", created_at as "createdAt", updated_at as "updatedAt",
+             last_login as "lastLogin"
       FROM users 
-      WHERE is_approved = false AND is_active = true
-      ORDER BY created_at ASC
-    `);
+      WHERE dhan_client_id = $1 AND is_active = true
+    `, [dhanClientId]);
     
-    return result.rows;
+    return result.rows[0] || null;
   } catch (error) {
-    console.error('Error getting pending approvals:', error);
-    throw error;
-  } finally {
-    client.release();
-  }
-}
-
-/**
- * Approve a user
- */
-export async function approveUser(userId: number): Promise<void> {
-  const client = await getDatabaseConnection();
-  
-  try {
-    await client.query(`
-      UPDATE users 
-      SET is_approved = true 
-      WHERE id = $1
-    `, [userId]);
-    
-    // Log the approval
-    await logUserAction(userId, 'USER_APPROVED', {
-      approvedBy: 'admin'
-    });
-  } catch (error) {
-    console.error('Error approving user:', error);
+    console.error('Error finding user by DHAN client ID:', error);
     throw error;
   } finally {
     client.release();

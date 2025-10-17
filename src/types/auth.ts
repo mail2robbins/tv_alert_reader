@@ -5,6 +5,7 @@ export interface User {
   fullName: string;
   isApproved: boolean;
   isActive: boolean;
+  dhanClientId?: string;
   createdAt: string;
   updatedAt: string;
   lastLogin?: string;

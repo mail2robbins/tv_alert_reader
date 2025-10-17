@@ -17,7 +17,7 @@ interface ManualOrderPlacementProps {
 }
 
 export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlacementProps) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [formData, setFormData] = useState<ManualOrderForm>({
     accountId: '',
     orderType: 'BUY',
@@ -41,12 +41,29 @@ export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlace
         const data = await response.json();
         
         if (data.success && data.data.config && data.data.config.accounts) {
-          setAccounts(data.data.config.accounts);
+          // Filter accounts based on user's DHAN_CLIENT_ID
+          let filteredAccounts = data.data.config.accounts;
+          
+          if (user?.dhanClientId) {
+            filteredAccounts = data.data.config.accounts.filter(
+              (account: DhanAccountConfig) => account.clientId === user.dhanClientId
+            );
+            
+            if (filteredAccounts.length === 0) {
+              setError(`No accounts found for your DHAN Client ID: ${user.dhanClientId}`);
+              return;
+            }
+          } else {
+            setError('Your account does not have a DHAN Client ID assigned. Please contact the administrator.');
+            return;
+          }
+          
+          setAccounts(filteredAccounts);
           // Auto-select first account if available
-          if (data.data.config.accounts.length > 0) {
+          if (filteredAccounts.length > 0) {
             setFormData(prev => ({
               ...prev,
-              accountId: data.data.config.accounts[0].accountId.toString()
+              accountId: filteredAccounts[0].accountId.toString()
             }));
           }
         } else {
@@ -60,8 +77,10 @@ export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlace
       }
     };
 
-    loadAccounts();
-  }, []);
+    if (user) {
+      loadAccounts();
+    }
+  }, [user]);
 
   const handleInputChange = (field: keyof ManualOrderForm, value: string | number) => {
     setFormData(prev => ({
@@ -148,8 +167,9 @@ export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlace
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Manual Order Placement</h2>
         <p className="text-gray-600">
-          Place a manual order using your configured account settings. The order will use the same 
-          position sizing, stop loss, and target price calculations as automatic TradingView alerts.
+          Place a manual order using your configured account settings. Only accounts associated with your 
+          DHAN Client ID are available for selection. The order will use the same position sizing, 
+          stop loss, and target price calculations as automatic TradingView alerts.
         </p>
       </div>
 

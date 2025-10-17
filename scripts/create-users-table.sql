@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
     full_name VARCHAR(100) NOT NULL,
     is_approved BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
+    dhan_client_id VARCHAR(50) UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP,
@@ -18,6 +19,7 @@ CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_approved ON users(is_approved);
 CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active);
+CREATE INDEX IF NOT EXISTS idx_users_dhan_client_id ON users(dhan_client_id);
 
 -- Create user sessions table for JWT token management
 CREATE TABLE IF NOT EXISTS user_sessions (
@@ -84,5 +86,6 @@ COMMENT ON TABLE user_audit_log IS 'Audit trail for user actions and security ev
 
 COMMENT ON COLUMN users.is_approved IS 'Manual approval flag - must be TRUE for login access';
 COMMENT ON COLUMN users.is_active IS 'Account status - FALSE disables login';
+COMMENT ON COLUMN users.dhan_client_id IS 'DHAN client ID assigned by administrator during approval';
 COMMENT ON COLUMN user_sessions.token_hash IS 'Hashed JWT token for security';
 COMMENT ON COLUMN user_sessions.expires_at IS 'Token expiration timestamp';

@@ -90,7 +90,8 @@ export default function RegisterForm() {
       } else {
         setError(result.error || 'Registration failed');
       }
-    } catch (error) {
+    } catch (err) {
+      console.error('Registration error:', err);
       setError('An unexpected error occurred');
     } finally {
       setIsLoading(false);
