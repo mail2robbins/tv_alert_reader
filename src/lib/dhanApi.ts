@@ -61,6 +61,10 @@ export interface DhanOrderResponse {
   correlationId?: string;
   accountId?: number;
   clientId?: string;
+  quantity?: number;
+  stopLossPrice?: number;
+  targetPrice?: number;
+  positionSizePercentage?: number;
 }
 
 // Generate correlation ID for order tracking
@@ -351,7 +355,11 @@ export async function placeDhanOrderForAccount(
         message: 'Order placed successfully',
         correlationId: orderRequest.correlationId,
         accountId: accountConfig.accountId,
-        clientId: accountConfig.clientId
+        clientId: accountConfig.clientId,
+        quantity: quantity,
+        stopLossPrice: positionCalculation?.stopLossPrice,
+        targetPrice: positionCalculation?.targetPrice,
+        positionSizePercentage: positionCalculation?.positionSizePercentage
       };
     } else {
       console.error(`Dhan order failed for account ${accountConfig.clientId}:`, responseData);
@@ -360,7 +368,11 @@ export async function placeDhanOrderForAccount(
         error: responseData.message || responseData.error || 'Order placement failed',
         correlationId: orderRequest.correlationId,
         accountId: accountConfig.accountId,
-        clientId: accountConfig.clientId
+        clientId: accountConfig.clientId,
+        quantity: quantity,
+        stopLossPrice: positionCalculation?.stopLossPrice,
+        targetPrice: positionCalculation?.targetPrice,
+        positionSizePercentage: positionCalculation?.positionSizePercentage
       };
     }
   } catch (error) {

@@ -164,11 +164,13 @@ export async function storePlacedOrder(
   dhanResponse: DhanOrderResponse,
   positionCalculation?: PositionCalculation
 ): Promise<PlacedOrder> {
-  const orderValue = alert.price * quantity;
+  // Use quantity from dhanResponse if available (for manual orders), otherwise use the passed quantity
+  const finalQuantity = dhanResponse.quantity || quantity;
+  const orderValue = alert.price * finalQuantity;
   const leveragedValue = positionCalculation?.leveragedValue || (orderValue / 2); // Default to 2x leverage
-  const positionSizePercentage = positionCalculation?.positionSizePercentage || 0;
-  const stopLossPrice = positionCalculation?.stopLossPrice;
-  const targetPrice = positionCalculation?.targetPrice;
+  const positionSizePercentage = positionCalculation?.positionSizePercentage || dhanResponse.positionSizePercentage || 0;
+  const stopLossPrice = positionCalculation?.stopLossPrice || dhanResponse.stopLossPrice;
+  const targetPrice = positionCalculation?.targetPrice || dhanResponse.targetPrice;
   
   const order: PlacedOrder = {
     id: generateOrderId(),
@@ -176,7 +178,7 @@ export async function storePlacedOrder(
     ticker: alert.ticker,
     signal: alert.signal,
     price: alert.price,
-    quantity,
+    quantity: finalQuantity,
     timestamp: new Date().toISOString(),
     correlationId: dhanResponse.correlationId || '',
     orderId: dhanResponse.orderId,
