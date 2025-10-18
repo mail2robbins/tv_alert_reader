@@ -240,15 +240,61 @@ export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlace
             <label htmlFor="orderType" className="block text-sm font-medium text-gray-700 mb-2">
               Order Type
             </label>
-            <select
-              id="orderType"
-              value={formData.orderType}
-              onChange={(e) => handleInputChange('orderType', e.target.value as 'BUY' | 'SELL')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+            <div
+              className={[
+                'inline-flex w-full sm:w-auto rounded-md shadow-sm border overflow-hidden',
+                formData.orderType === 'BUY'
+                  ? 'border-green-300 bg-green-50'
+                  : 'border-red-300 bg-red-50'
+              ].join(' ')}
             >
-              <option value="BUY">BUY</option>
-              <option value="SELL">SELL</option>
-            </select>
+              <button
+                type="button"
+                aria-pressed={formData.orderType === 'BUY'}
+                onClick={() => handleInputChange('orderType', 'BUY')}
+                className={[
+                  'px-4 py-2 text-sm font-medium focus:outline-none inline-flex items-center gap-2',
+                  'w-1/2 sm:w-auto',
+                  formData.orderType === 'BUY'
+                    ? 'bg-green-600 text-white hover:bg-green-700 ring-1 ring-inset ring-green-400'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                ].join(' ')}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="h-4 w-4"
+                  aria-hidden="true"
+                >
+                  <path d="M12 4l-5 5h3v7h4V9h3l-5-5z" />
+                </svg>
+                <span>BUY</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={formData.orderType === 'SELL'}
+                onClick={() => handleInputChange('orderType', 'SELL')}
+                className={[
+                  'px-4 py-2 text-sm font-medium focus:outline-none border-l border-gray-300 inline-flex items-center gap-2',
+                  'w-1/2 sm:w-auto',
+                  formData.orderType === 'SELL'
+                    ? 'bg-red-600 text-white hover:bg-red-700 ring-1 ring-inset ring-red-400'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                ].join(' ')}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="h-4 w-4"
+                  aria-hidden="true"
+                >
+                  <path d="M12 20l5-5h-3V8h-4v7H7l5 5z" />
+                </svg>
+                <span>SELL</span>
+              </button>
+            </div>
           </div>
 
           {/* Execution Type */}
@@ -256,15 +302,61 @@ export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlace
             <label htmlFor="executionType" className="block text-sm font-medium text-gray-700 mb-2">
               Execution Type
             </label>
-            <select
-              id="executionType"
-              value={formData.executionType}
-              onChange={(e) => handleInputChange('executionType', e.target.value as 'MARKET' | 'LIMIT')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+            <div
+              className={[
+                'inline-flex w-full sm:w-auto rounded-md shadow-sm border overflow-hidden',
+                formData.executionType === 'MARKET'
+                  ? 'border-blue-300 bg-blue-50'
+                  : 'border-indigo-300 bg-indigo-50'
+              ].join(' ')}
             >
-              <option value="MARKET">MARKET - Execute at current market price</option>
-              <option value="LIMIT">LIMIT - Execute only at specified price or better</option>
-            </select>
+              <button
+                type="button"
+                aria-pressed={formData.executionType === 'MARKET'}
+                onClick={() => handleInputChange('executionType', 'MARKET')}
+                className={[
+                  'px-4 py-2 text-sm font-medium focus:outline-none inline-flex items-center gap-2',
+                  'w-1/2 sm:w-auto',
+                  formData.executionType === 'MARKET'
+                    ? 'bg-blue-600 text-white hover:bg-blue-700 ring-1 ring-inset ring-blue-400'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                ].join(' ')}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="h-4 w-4"
+                  aria-hidden="true"
+                >
+                  <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
+                </svg>
+                <span>MARKET</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={formData.executionType === 'LIMIT'}
+                onClick={() => handleInputChange('executionType', 'LIMIT')}
+                className={[
+                  'px-4 py-2 text-sm font-medium focus:outline-none border-l border-gray-300 inline-flex items-center gap-2',
+                  'w-1/2 sm:w-auto',
+                  formData.executionType === 'LIMIT'
+                    ? 'bg-indigo-600 text-white hover:bg-indigo-700 ring-1 ring-inset ring-indigo-400'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                ].join(' ')}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="h-4 w-4"
+                  aria-hidden="true"
+                >
+                  <path d="M6 2v20l6-4 6 4V2H6zm10 4v9l-4-2.667L8 15V6h8z" />
+                </svg>
+                <span>LIMIT</span>
+              </button>
+            </div>
             <p className="mt-1 text-xs text-gray-500">
               {formData.executionType === 'MARKET' 
                 ? 'Order will execute immediately at the best available market price'
