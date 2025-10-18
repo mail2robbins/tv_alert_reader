@@ -370,3 +370,50 @@ export async function emailExists(email: string): Promise<boolean> {
     client.release();
   }
 }
+
+/**
+ * Change user password
+ */
+export async function changeUserPassword(
+  userId: number, 
+  currentPassword: string, 
+  newPassword: string
+): Promise<boolean> {
+  const client = await getDatabaseConnection();
+  
+  try {
+    // First, verify the current password
+    const result = await client.query(`
+      SELECT password_hash FROM users 
+      WHERE id = $1 AND is_active = true
+    `, [userId]);
+    
+    if (result.rows.length === 0) {
+      return false;
+    }
+    
+    const currentPasswordHash = result.rows[0].password_hash;
+    const isCurrentPasswordValid = await verifyPassword(currentPassword, currentPasswordHash);
+    
+    if (!isCurrentPasswordValid) {
+      return false;
+    }
+    
+    // Hash the new password
+    const newPasswordHash = await hashPassword(newPassword);
+    
+    // Update the password
+    await client.query(`
+      UPDATE users 
+      SET password_hash = $1, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $2
+    `, [newPasswordHash, userId]);
+    
+    return true;
+  } catch (error) {
+    console.error('Error changing user password:', error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}

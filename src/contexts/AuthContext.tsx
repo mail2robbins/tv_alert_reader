@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, AuthResponse, AuthContextType } from '@/types/auth';
+import { User, AuthResponse, AuthContextType, ChangePasswordRequest } from '@/types/auth';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -128,6 +128,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const changePassword = async (passwordData: ChangePasswordRequest): Promise<AuthResponse> => {
+    try {
+      setIsLoading(true);
+      
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(passwordData)
+      });
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Password change error:', error);
+      return {
+        success: false,
+        error: 'Network error occurred'
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     try {
       if (token) {
@@ -156,6 +182,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     token,
     login,
     register,
+    changePassword,
     logout,
     isLoading,
     isAuthenticated

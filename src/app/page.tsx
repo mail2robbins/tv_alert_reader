@@ -14,6 +14,7 @@ import AccountConfigCard from '@/components/AccountConfigCard';
 import ExternalWebhookConfig from '@/components/ExternalWebhookConfig';
 import TickerInput from '@/components/TickerInput';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import ChangePassword from '@/components/ChangePassword';
 import { useAuth } from '@/contexts/AuthContext';
 import { PlacedOrder } from '@/lib/orderTracker';
 
@@ -47,6 +48,7 @@ export default function Home() {
   const [orderStartDate, setOrderStartDate] = useState<Date | null>(null);
   const [orderEndDate, setOrderEndDate] = useState<Date | null>(null);
   const [orderTicker, setOrderTicker] = useState<string>('');
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [filterInputs, setFilterInputs] = useState<{
     ticker: string;
     signal: string;
@@ -293,6 +295,15 @@ export default function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
                   Manual Order Placement
+                </button>
+                <button
+                  onClick={() => setShowChangePassword(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center gap-2 text-sm"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                  </svg>
+                  Change Password
                 </button>
                 <button
                   onClick={logout}
@@ -585,6 +596,11 @@ export default function Home() {
           </p>
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      {showChangePassword && (
+        <ChangePassword onClose={() => setShowChangePassword(false)} />
+      )}
     </ProtectedRoute>
   );
 }

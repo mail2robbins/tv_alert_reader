@@ -52,11 +52,17 @@ export interface AuthResponse {
   error?: string;
 }
 
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
 export interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (username: string, password: string) => Promise<AuthResponse>;
   register: (userData: RegisterRequest) => Promise<AuthResponse>;
+  changePassword: (passwordData: ChangePasswordRequest) => Promise<AuthResponse>;
   logout: () => void;
   isLoading: boolean;
   isAuthenticated: boolean;
