@@ -259,27 +259,28 @@ export default function Home() {
 
   return (
     <ProtectedRoute requireApproval={true}>
-      <div className="min-h-screen bg-gray-50 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto px-6 py-8">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
-              <div className="flex-1">
-                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                  <svg className="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 32 32">
-                    <rect width="32" height="32" rx="6" fill="currentColor"/>
-                    <path d="M4 24 L8 20 L12 22 L16 16 L20 18 L24 12 L28 14" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                    <circle cx="8" cy="20" r="2" fill="#10b981"/>
-                    <circle cx="16" cy="16" r="2" fill="#10b981"/>
-                    <circle cx="24" cy="12" r="2" fill="#10b981"/>
-                    <path d="M24 6 C24.5 6 25 6.5 25 7 L25 9 C25 9.5 24.5 10 24 10 L22 10 C21.5 10 21 9.5 21 9 L21 7 C21 6.5 21.5 6 22 6 L24 6 Z" fill="#f59e0b"/>
-                    <circle cx="26" cy="4" r="2" fill="#ef4444"/>
-                  </svg>
-                  TradingView Alert Reader
-                </h1>
-                <p className="mt-2 text-gray-600">
-                  Monitor and analyze your TradingView alerts in real-time
-                </p>
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-6xl mx-auto px-6 py-8">
+            {/* Header */}
+            <div className="mb-8">
+              <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+                <div className="flex-1">
+                  <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                    <svg className="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 32 32">
+                      <rect width="32" height="32" rx="6" fill="currentColor"/>
+                      <path d="M4 24 L8 20 L12 22 L16 16 L20 18 L24 12 L28 14" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                      <circle cx="8" cy="20" r="2" fill="#10b981"/>
+                      <circle cx="16" cy="16" r="2" fill="#10b981"/>
+                      <circle cx="24" cy="12" r="2" fill="#10b981"/>
+                      <path d="M24 6 C24.5 6 25 6.5 25 7 L25 9 C25 9.5 24.5 10 24 10 L22 10 C21.5 10 21 9.5 21 9 L21 7 C21 6.5 21.5 6 22 6 L24 6 Z" fill="#f59e0b"/>
+                      <circle cx="26" cy="4" r="2" fill="#ef4444"/>
+                    </svg>
+                    TradingView Alert Reader
+                  </h1>
+                  <p className="mt-2 text-gray-600">
+                    Monitor and analyze your TradingView alerts in real-time
+                  </p>
                 {user && (
                   <p className="mt-1 text-sm text-gray-500">
                     Welcome, {user.fullName} ({user.username})
@@ -594,6 +595,7 @@ export default function Home() {
           <p className="text-blue-600 text-sm mt-2">
             Make sure to include your webhook secret in the payload for authentication.
           </p>
+        </div>
         </div>
       </div>
 
