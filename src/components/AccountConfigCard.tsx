@@ -19,6 +19,7 @@ interface DhanAccountConfig {
   minTrailJump: number;
   rebaseTpAndSl: boolean;
   rebaseThresholdPercentage: number;
+  allowDuplicateTickers: boolean;
 }
 
 interface MultiAccountConfig {
@@ -422,6 +423,16 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
                 <div className="bg-white p-3 rounded border">
                   <div className="text-gray-500 text-xs">Rebase Threshold</div>
                   <div className="font-bold text-lg text-gray-900">{(account.rebaseThresholdPercentage || 0.1).toFixed(3)}</div>
+                </div>
+                <div className="bg-white p-3 rounded border">
+                  <div className="text-gray-500 text-xs">Allow Duplicate Tickers</div>
+                  <div className="font-bold text-lg text-gray-900">
+                    {account.allowDuplicateTickers ? (
+                      <span className="text-green-600">Yes</span>
+                    ) : (
+                      <span className="text-red-600">No</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
