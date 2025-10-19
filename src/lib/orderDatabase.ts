@@ -312,6 +312,29 @@ export async function getTickerCacheStatsFromDatabase(): Promise<{
   }
 }
 
+// Check if ticker has been ordered today for a specific account
+export async function hasTickerBeenOrderedTodayForAccountInDatabase(ticker: string, accountId: number): Promise<boolean> {
+  const client = await getDatabaseConnection();
+  
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const result = await client.query(`
+      SELECT COUNT(*) as count FROM placed_orders 
+      WHERE ticker = $1 
+        AND account_id = $2 
+        AND DATE(timestamp) = $3
+        AND status IN ('placed', 'pending')
+    `, [ticker.toUpperCase(), accountId, today]);
+    
+    return parseInt(result.rows[0].count) > 0;
+  } catch (error) {
+    console.error('Error checking ticker cache for account in database:', error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 // Delete old orders (cleanup function)
 export async function deleteOldOrders(daysToKeep: number = 30): Promise<number> {
   const client = await getDatabaseConnection();

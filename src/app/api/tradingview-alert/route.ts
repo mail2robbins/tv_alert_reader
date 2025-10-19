@@ -3,7 +3,7 @@ import { validateTradingViewAlert, validateChartInkAlert, processChartInkAlert, 
 import { logAlert, logError } from '@/lib/fileLogger';
 import { placeDhanOrderOnAllAccounts } from '@/lib/dhanApi';
 import { rebaseQueueManager } from '@/lib/rebaseQueueManager';
-import { storeMultiplePlacedOrders, hasTickerBeenOrderedToday, PlacedOrder } from '@/lib/orderTracker';
+import { storeMultiplePlacedOrders, PlacedOrder } from '@/lib/orderTracker';
 import { calculatePositionSizesForAllAccounts } from '@/lib/fundManager';
 import { forwardAlertToExternalWebhooks } from '@/lib/externalWebhookForwarder';
 import { getAccountConfiguration } from '@/lib/multiAccountManager';
@@ -167,65 +167,60 @@ export async function POST(request: NextRequest) {
           try {
             console.log(`Auto-placing order for ${alert.signal} signal:`, alert.ticker);
             
-            // Check if ticker has already been ordered today
-            if (await hasTickerBeenOrderedToday(alert.ticker)) {
-              console.log(`Order blocked: Ticker ${alert.ticker} has already been ordered today`);
-              await logError('Order blocked - duplicate ticker', new Error(`Ticker ${alert.ticker} already ordered today`));
+            // Calculate position sizes for all accounts using multi-account fund management
+            // Note: Duplicate ticker checking is now handled per-account based on allowDuplicateTickers setting
+            const positionCalculations = calculatePositionSizesForAllAccounts(alert.price, alert.signal);
+            const validCalculations = positionCalculations.filter(calc => calc.canPlaceOrder);
+          
+            if (validCalculations.length === 0) {
+              const reasons = positionCalculations.map(calc => calc.reason).filter(Boolean);
+              console.log('Cannot place order on any account:', reasons);
+              await logError('Order placement blocked on all accounts', new Error(reasons.join('; ') || 'No valid accounts'));
             } else {
-              // Calculate position sizes for all accounts using multi-account fund management
-              const positionCalculations = calculatePositionSizesForAllAccounts(alert.price, alert.signal);
-              const validCalculations = positionCalculations.filter(calc => calc.canPlaceOrder);
-            
-              if (validCalculations.length === 0) {
-                const reasons = positionCalculations.map(calc => calc.reason).filter(Boolean);
-                console.log('Cannot place order on any account:', reasons);
-                await logError('Order placement blocked on all accounts', new Error(reasons.join('; ') || 'No valid accounts'));
-              } else {
-                const dhanResponses = await placeDhanOrderOnAllAccounts(alert, {
-                  useAutoPositionSizing: true,
-                  exchangeSegment: process.env.DHAN_EXCHANGE_SEGMENT || 'NSE_EQ',
-                  productType: process.env.DHAN_PRODUCT_TYPE || 'INTRADAY',
-                  orderType: process.env.DHAN_ORDER_TYPE || 'MARKET'
-                });
-                
-                const placedOrders = await storeMultiplePlacedOrders(
-                  alert, 
-                  alertId, 
-                  dhanResponses,
-                  positionCalculations
-                );
-                
-                // Add successful orders to rebase queue for delayed processing
-                for (const dhanResponse of dhanResponses) {
-                  if (dhanResponse.success && dhanResponse.orderId && dhanResponse.accountId && dhanResponse.clientId) {
-                    const accountConfig = getAccountConfiguration(dhanResponse.accountId);
-                    if (accountConfig && accountConfig.rebaseTpAndSl) {
-                      console.log(`📝 Adding order ${dhanResponse.orderId} to rebase queue for account ${dhanResponse.clientId}`);
-                      
-                      rebaseQueueManager.addToQueue(
-                        dhanResponse.orderId,
-                        accountConfig,
-                        alert.price,
-                        dhanResponse.clientId,
-                        dhanResponse.accountId.toString(),
-                        alert.signal
-                      );
-                    }
+              const dhanResponses = await placeDhanOrderOnAllAccounts(alert, {
+                useAutoPositionSizing: true,
+                exchangeSegment: process.env.DHAN_EXCHANGE_SEGMENT || 'NSE_EQ',
+                productType: process.env.DHAN_PRODUCT_TYPE || 'INTRADAY',
+                orderType: process.env.DHAN_ORDER_TYPE || 'MARKET'
+              });
+              
+              const placedOrders = await storeMultiplePlacedOrders(
+                alert, 
+                alertId, 
+                dhanResponses,
+                positionCalculations
+              );
+              
+              // Add successful orders to rebase queue for delayed processing
+              for (const dhanResponse of dhanResponses) {
+                if (dhanResponse.success && dhanResponse.orderId && dhanResponse.accountId && dhanResponse.clientId) {
+                  const accountConfig = getAccountConfiguration(dhanResponse.accountId);
+                  if (accountConfig && accountConfig.rebaseTpAndSl) {
+                    console.log(`📝 Adding order ${dhanResponse.orderId} to rebase queue for account ${dhanResponse.clientId}`);
+                    
+                    rebaseQueueManager.addToQueue(
+                      dhanResponse.orderId,
+                      accountConfig,
+                      alert.price,
+                      dhanResponse.clientId,
+                      dhanResponse.accountId.toString(),
+                      alert.signal
+                    );
                   }
                 }
-                
-                allOrders.push(...placedOrders);
-                totalSuccessfulOrders += placedOrders.filter(order => order.status === 'placed').length;
-                totalFailedOrders += placedOrders.filter(order => order.status === 'failed').length;
-                
-                console.log('Multi-account order placement completed for', alert.ticker, ':', {
-                  totalOrders: placedOrders.length,
-                  successfulOrders: placedOrders.filter(order => order.status === 'placed').length,
-                  failedOrders: placedOrders.filter(order => order.status === 'failed').length,
-                  accountsUsed: validCalculations.length,
-                  rebaseQueued: rebaseQueueManager.getQueueStatus().queueLength
-                });
               }
+              
+              allOrders.push(...placedOrders);
+              totalSuccessfulOrders += placedOrders.filter(order => order.status === 'placed').length;
+              totalFailedOrders += placedOrders.filter(order => order.status === 'failed').length;
+              
+              console.log('Multi-account order placement completed for', alert.ticker, ':', {
+                totalOrders: placedOrders.length,
+                successfulOrders: placedOrders.filter(order => order.status === 'placed').length,
+                failedOrders: placedOrders.filter(order => order.status === 'failed').length,
+                accountsUsed: validCalculations.length,
+                rebaseQueued: rebaseQueueManager.getQueueStatus().queueLength
+              });
             }
           } catch (orderError) {
             console.error('Failed to auto-place order for', alert.ticker, ':', orderError);

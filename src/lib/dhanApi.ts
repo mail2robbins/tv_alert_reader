@@ -248,6 +248,23 @@ export async function placeDhanOrderForAccount(
     trailingJump?: number;
   }
 ): Promise<DhanOrderResponse> {
+  // Check if duplicate ticker orders are allowed for this account
+  if (!accountConfig.allowDuplicateTickers) {
+    const { hasTickerBeenOrderedTodayForAccount } = await import('./orderTracker');
+    const alreadyOrdered = await hasTickerBeenOrderedTodayForAccount(alert.ticker, accountConfig.accountId);
+    
+    if (alreadyOrdered) {
+      console.log(`Order blocked for account ${accountConfig.clientId}: Ticker ${alert.ticker} has already been ordered today and allowDuplicateTickers is false`);
+      return {
+        success: false,
+        error: `Order blocked: Ticker ${alert.ticker} has already been ordered today for this account`,
+        correlationId: generateCorrelationId(),
+        accountId: accountConfig.accountId,
+        clientId: accountConfig.clientId
+      };
+    }
+  }
+
   // Calculate position size for this specific account
   let quantity: number;
   let positionCalculation;

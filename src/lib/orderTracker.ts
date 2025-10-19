@@ -11,7 +11,8 @@ import {
   updateOrderStatusInDatabase,
   hasTickerBeenOrderedTodayInDatabase,
   addTickerToCacheInDatabase,
-  getTickerCacheStatsFromDatabase
+  getTickerCacheStatsFromDatabase,
+  hasTickerBeenOrderedTodayForAccountInDatabase
 } from './orderDatabase';
 
 // Order tracking interface
@@ -154,6 +155,27 @@ export function getTickerCacheEntry(ticker: string, date?: string): TickerCacheE
     entry.ticker.toUpperCase() === ticker.toUpperCase() && 
     entry.date === targetDate
   ) || null;
+}
+
+// Check if ticker has already been ordered today for a specific account
+export async function hasTickerBeenOrderedTodayForAccount(ticker: string, accountId: number): Promise<boolean> {
+  if (await isDatabaseAvailable()) {
+    try {
+      return await hasTickerBeenOrderedTodayForAccountInDatabase(ticker, accountId);
+    } catch (error) {
+      console.error('Failed to check ticker cache for account in database, falling back to memory:', error);
+    }
+  }
+
+  // Fallback to memory storage - check placed orders for this account today
+  const today = getCurrentDateString();
+  const ordersToday = memoryOrders.filter(order => 
+    order.ticker.toUpperCase() === ticker.toUpperCase() && 
+    order.accountId === accountId &&
+    order.timestamp.startsWith(today) &&
+    (order.status === 'placed' || order.status === 'pending')
+  );
+  return ordersToday.length > 0;
 }
 
 // Store placed order

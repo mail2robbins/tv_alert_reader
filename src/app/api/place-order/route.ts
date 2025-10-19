@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { placeDhanOrder, placeDhanOrderOnAllAccounts, placeDhanOrderForAccount } from '@/lib/dhanApi';
 import { rebaseQueueManager } from '@/lib/rebaseQueueManager';
-import { storePlacedOrder, storeMultiplePlacedOrders, hasTickerBeenOrderedToday } from '@/lib/orderTracker';
+import { storePlacedOrder, storeMultiplePlacedOrders } from '@/lib/orderTracker';
 import { calculatePositionSize, calculatePositionSizesForAllAccounts } from '@/lib/fundManager';
 import { logError } from '@/lib/fileLogger';
 import { getAccountConfiguration } from '@/lib/multiAccountManager';
@@ -194,14 +194,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if ticker has already been ordered today
-    if (await hasTickerBeenOrderedToday(alert.ticker)) {
-      console.log(`Order blocked: Ticker ${alert.ticker} has already been ordered today`);
-      return NextResponse.json(
-        { success: false, error: `Order blocked: Ticker ${alert.ticker} has already been ordered today` } as ApiResponse<null>,
-        { status: 409 } // Conflict status code
-      );
-    }
+    // Note: Duplicate ticker checking is now handled per-account based on allowDuplicateTickers setting
+    // in the placeDhanOrderForAccount function
 
     if (useMultiAccount) {
       // Multi-account order placement
@@ -360,7 +354,8 @@ export async function POST(request: NextRequest) {
           enableTrailingStopLoss: process.env.ENABLE_TRAILING_STOP_LOSS === 'true',
           minTrailJump: parseFloat(process.env.MIN_TRAIL_JUMP || '0.05'),
           rebaseTpAndSl: process.env.REBASE_TP_AND_SL === 'true',
-          rebaseThresholdPercentage: parseFloat(process.env.REBASE_THRESHOLD_PERCENTAGE || '0.1')
+          rebaseThresholdPercentage: parseFloat(process.env.REBASE_THRESHOLD_PERCENTAGE || '0.1'),
+          allowDuplicateTickers: process.env.ALLOW_DUPLICATE_TICKERS === 'true'
         };
 
         if (legacyAccountConfig.rebaseTpAndSl) {
