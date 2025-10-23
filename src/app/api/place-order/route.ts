@@ -4,7 +4,7 @@ import { rebaseQueueManager } from '@/lib/rebaseQueueManager';
 import { storePlacedOrder, storeMultiplePlacedOrders } from '@/lib/orderTracker';
 import { calculatePositionSize, calculatePositionSizesForAllAccounts } from '@/lib/fundManager';
 import { logError } from '@/lib/fileLogger';
-import { getAccountConfiguration } from '@/lib/multiAccountManager';
+import { getAccountConfiguration, loadAccountConfigurations } from '@/lib/multiAccountManager';
 import { extractTokenFromHeader, verifyToken } from '@/lib/auth';
 import { findUserById } from '@/lib/userDatabase';
 import { ApiResponse } from '@/types/alert';
@@ -174,11 +174,188 @@ async function handleManualOrder(body: {
   }
 }
 
+// Handle manual order placement in all accounts
+async function handleManualOrderAllAccounts(body: {
+  orderType: 'BUY' | 'SELL';
+  executionType?: 'MARKET' | 'LIMIT';
+  ticker: string;
+  currentPrice: number;
+}, request: NextRequest) {
+  try {
+    // Verify user authentication for manual orders
+    const authHeader = request.headers.get('authorization');
+    const token = extractTokenFromHeader(authHeader);
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required for manual orders' } as ApiResponse<null>,
+        { status: 401 }
+      );
+    }
+
+    const payload = verifyToken(token);
+    if (!payload) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid or expired token' } as ApiResponse<null>,
+        { status: 401 }
+      );
+    }
+
+    // Verify user exists and is approved
+    const user = await findUserById(payload.userId);
+    if (!user || !user.isApproved || !user.isActive) {
+      return NextResponse.json(
+        { success: false, error: 'User not authorized to place manual orders' } as ApiResponse<null>,
+        { status: 403 }
+      );
+    }
+
+    const { orderType, executionType, ticker, currentPrice } = body;
+
+    // Get all account configurations for the user
+    const config = loadAccountConfigurations();
+    const userAccounts = config.accounts.filter(
+      (account) => account.clientId === user.dhanClientId && account.isActive
+    );
+
+    if (userAccounts.length === 0) {
+      return NextResponse.json(
+        { success: false, error: `No active accounts found for your DHAN Client ID: ${user.dhanClientId}` } as ApiResponse<null>,
+        { status: 400 }
+      );
+    }
+
+    // Create a mock TradingView alert for the manual order
+    const manualAlert: TradingViewAlert = {
+      ticker: ticker.toUpperCase(),
+      signal: orderType,
+      price: currentPrice,
+      timestamp: new Date().toISOString(),
+      strategy: 'Manual Order (All Accounts)',
+      custom_note: `Manual ${orderType} order for ${ticker} at ₹${currentPrice} in all accounts`
+    };
+
+    console.log(`📝 Placing manual order in all accounts:`, {
+      orderType,
+      executionType,
+      ticker,
+      currentPrice,
+      accountCount: userAccounts.length,
+      accounts: userAccounts.map(acc => ({
+        accountId: acc.accountId,
+        clientId: acc.clientId,
+        availableFunds: acc.availableFunds
+      }))
+    });
+
+    // Place orders on all user accounts
+    const dhanResponses = [];
+    const placedOrders = [];
+
+    for (const accountConfig of userAccounts) {
+      try {
+        const dhanResponse = await placeDhanOrderForAccount(manualAlert, accountConfig, {
+          useAutoPositionSizing: true,
+          exchangeSegment: process.env.DHAN_EXCHANGE_SEGMENT || 'NSE_EQ',
+          productType: process.env.DHAN_PRODUCT_TYPE || 'CNC',
+          orderType: executionType || 'MARKET'
+        });
+
+        dhanResponses.push(dhanResponse);
+
+        // Store the order
+        const manualOrderId = `manual_all_${Date.now()}_${accountConfig.accountId}`;
+        const placedOrder = await storePlacedOrder(
+          manualAlert,
+          manualOrderId,
+          dhanResponse.success ? 1 : 0,
+          dhanResponse,
+          undefined
+        );
+
+        placedOrders.push(placedOrder);
+
+        // Add to rebase queue if successful and rebasing is enabled
+        if (dhanResponse.success && dhanResponse.orderId && accountConfig.rebaseTpAndSl) {
+          console.log(`📝 Adding manual order ${dhanResponse.orderId} to rebase queue for account ${accountConfig.clientId}`);
+          
+          rebaseQueueManager.addToQueue(
+            dhanResponse.orderId,
+            accountConfig,
+            currentPrice,
+            accountConfig.clientId,
+            accountConfig.accountId.toString(),
+            orderType
+          );
+        }
+      } catch (error) {
+        console.error(`Error placing order for account ${accountConfig.accountId}:`, error);
+        dhanResponses.push({
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          correlationId: `error_${Date.now()}`,
+          accountId: accountConfig.accountId,
+          clientId: accountConfig.clientId
+        });
+      }
+    }
+
+    const successfulOrders = dhanResponses.filter(resp => resp.success);
+    const failedOrders = dhanResponses.filter(resp => !resp.success);
+
+    return NextResponse.json(
+      { 
+        success: successfulOrders.length > 0, 
+        data: {
+          orders: placedOrders,
+          dhanResponses,
+          rebaseQueueStatus: rebaseQueueManager.getQueueStatus(),
+          summary: {
+            totalAccounts: userAccounts.length,
+            successfulOrders: successfulOrders.length,
+            failedOrders: failedOrders.length,
+            orderType,
+            executionType,
+            ticker,
+            currentPrice
+          }
+        }
+      } as ApiResponse<{
+        orders: typeof placedOrders;
+        dhanResponses: typeof dhanResponses;
+        rebaseQueueStatus: ReturnType<typeof rebaseQueueManager.getQueueStatus>;
+        summary: {
+          totalAccounts: number;
+          successfulOrders: number;
+          failedOrders: number;
+          orderType: string;
+          executionType?: string;
+          ticker: string;
+          currentPrice: number;
+        };
+      }>,
+      { status: 200 }
+    );
+
+  } catch (error) {
+    console.error('Manual order placement in all accounts failed:', error);
+    return NextResponse.json(
+      { success: false, error: `Manual order placement failed: ${error instanceof Error ? error.message : String(error)}` } as ApiResponse<null>,
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    // Check if this is a manual order request
+    // Check if this is a manual order request for all accounts
+    if (body.placeInAllAccounts && body.orderType && body.ticker && body.currentPrice) {
+      return handleManualOrderAllAccounts(body, request);
+    }
+    
+    // Check if this is a manual order request for a single account
     if (body.accountId && body.orderType && body.ticker && body.currentPrice) {
       return handleManualOrder(body, request);
     }
