@@ -212,15 +212,13 @@ async function handleManualOrderAllAccounts(body: {
 
     const { orderType, executionType, ticker, currentPrice } = body;
 
-    // Get all account configurations for the user
+    // Get all active account configurations
     const config = loadAccountConfigurations();
-    const userAccounts = config.accounts.filter(
-      (account) => account.clientId === user.dhanClientId && account.isActive
-    );
+    const userAccounts = config.activeAccounts;
 
     if (userAccounts.length === 0) {
       return NextResponse.json(
-        { success: false, error: `No active accounts found for your DHAN Client ID: ${user.dhanClientId}` } as ApiResponse<null>,
+        { success: false, error: 'No active accounts found in configuration' } as ApiResponse<null>,
         { status: 400 }
       );
     }
