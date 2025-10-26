@@ -2,6 +2,13 @@
 
 A Next.js application that receives TradingView alerts via webhook and provides a beautiful UI to view, filter, and analyze them.
 
+## 🔄 Database Migration
+
+**Migrating to a new PostgreSQL database?** See the complete migration guide:
+- **Quick Start**: [MIGRATION_QUICK_START.md](./MIGRATION_QUICK_START.md) - 4 simple steps
+- **Full Guide**: [DATABASE_MIGRATION_GUIDE.md](./DATABASE_MIGRATION_GUIDE.md) - Comprehensive documentation
+- **Overview**: [README_MIGRATION.md](./README_MIGRATION.md) - Complete solution details
+
 ## Features
 
 - 🔗 **Webhook Endpoint**: Secure API endpoint to receive TradingView alerts
