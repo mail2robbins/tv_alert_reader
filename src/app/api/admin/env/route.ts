@@ -1,33 +1,5 @@
 import { NextResponse } from 'next/server';
 
-// List of user-defined environment variable prefixes/patterns
-const USER_DEFINED_PREFIXES = [
-  'DATABASE_URL',
-  'OLD_DATABASE_URL',
-  'ALERT_SOURCE',
-  'TRADINGVIEW_',
-  'ALERTS_LOG_FILE',
-  'ERROR_LOG_FILE',
-  'RATE_LIMIT_',
-  'DHAN_',
-  'AVAILABLE_FUNDS',
-  'LEVERAGE',
-  'MAX_POSITION_SIZE',
-  'MIN_ORDER_VALUE',
-  'MAX_ORDER_VALUE',
-  'STOP_LOSS_PERCENTAGE',
-  'TARGET_PRICE_PERCENTAGE',
-  'RISK_ON_CAPITAL',
-  'ENABLE_TRAILING_STOP_LOSS',
-  'MIN_TRAIL_JUMP',
-  'REBASE_',
-  'AUTO_PLACE_',
-  'DEFAULT_ORDER_QUANTITY',
-  'EXTERNAL_WEBHOOK_URL',
-  'JWT_SECRET',
-  'JWT_EXPIRES_IN',
-];
-
 // Common system environment variables to exclude
 const SYSTEM_ENV_PATTERNS = [
   'PATH',
@@ -38,11 +10,13 @@ const SYSTEM_ENV_PATTERNS = [
   'PWD',
   'TEMP',
   'TMP',
+  'TMPDIR',
   'OS',
   'PROCESSOR_',
   'SYSTEMROOT',
   'WINDIR',
   'PROGRAMFILES',
+  'PROGRAMDATA',
   'COMMONPROGRAMFILES',
   'APPDATA',
   'LOCALAPPDATA',
@@ -52,6 +26,7 @@ const SYSTEM_ENV_PATTERNS = [
   'LOGONSERVER',
   'COMPUTERNAME',
   'USERDOMAIN',
+  'USERDOMAIN_ROAMINGPROFILE',
   'SESSIONNAME',
   'NUMBER_OF_PROCESSORS',
   'PATHEXT',
@@ -61,6 +36,7 @@ const SYSTEM_ENV_PATTERNS = [
   'PUBLIC',
   'PSMODULEPATH',
   'ONEDRIVE',
+  'ONEDRIVECONSUMER',
   'CHROME_',
   'VSCODE_',
   'TERM_',
@@ -71,21 +47,72 @@ const SYSTEM_ENV_PATTERNS = [
   'INIT_CWD',
   '__',
   'NEXT_RUNTIME',
+  'VERCEL',
+  'CI',
+  'NETLIFY',
+  'GITHUB_',
+  'GITLAB_',
+  'BITBUCKET_',
+  'JENKINS_',
+  'TRAVIS_',
+  'CIRCLE_',
+  'BUILDKITE_',
+  'AZURE_',
+  'AWS_',
+  'GOOGLE_',
+  'HEROKU_',
+  'RENDER_',
+  'RAILWAY_',
+  'FLY_',
+  'HOSTNAME',
+  'SHLVL',
+  'OLDPWD',
+  'DISPLAY',
+  'XAUTHORITY',
+  'XDG_',
+  'DESKTOP_SESSION',
+  'GDMSESSION',
+  'GNOME_',
+  'KDE_',
+  'QT_',
+  'GTK_',
+  'DBUS_',
+  'SESSION_MANAGER',
+  'SSH_',
+  'MAIL',
+  'LOGNAME',
+  'EDITOR',
+  'VISUAL',
+  'PAGER',
+  'LESS',
+  'MORE',
+  'MANPATH',
+  'INFOPATH',
+  'LS_COLORS',
+  'CLICOLOR',
+  'LSCOLORS',
+  'GREP_',
+  'HISTFILE',
+  'HISTSIZE',
+  'HISTCONTROL',
+  'PROMPT_COMMAND',
+  'PS1',
+  'PS2',
+  'PS3',
+  'PS4',
+  'BASH_',
+  'ZSH_',
+  'FISH_',
 ];
 
 function isUserDefinedEnvVar(key: string): boolean {
-  // Check if it matches any user-defined prefix
-  const matchesUserPrefix = USER_DEFINED_PREFIXES.some(prefix => 
-    key.startsWith(prefix) || key.includes(prefix)
-  );
-  
   // Check if it matches any system pattern
   const matchesSystemPattern = SYSTEM_ENV_PATTERNS.some(pattern => 
     key.startsWith(pattern) || key === pattern
   );
   
-  // Include if it matches user prefix and doesn't match system pattern
-  return matchesUserPrefix && !matchesSystemPattern;
+  // Include everything that doesn't match system patterns
+  return !matchesSystemPattern;
 }
 
 export async function GET() {
