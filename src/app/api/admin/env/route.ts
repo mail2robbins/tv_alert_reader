@@ -103,6 +103,15 @@ const SYSTEM_ENV_PATTERNS = [
   'BASH_',
   'ZSH_',
   'FISH_',
+  'NEXT_DEPLOYMENT_ID',
+  'NOW_REGION',
+  'NX_DAEMON',
+  'LD_LIBRARY_PATH',
+  'TURBO_CACHE',
+  'TURBO_DOWNLOAD_LOCAL_ENABLED',
+  'TURBO_REMOTE_ONLY',
+  'TURBO_RUN_SUMMARY',
+  'TZ',
 ];
 
 function isUserDefinedEnvVar(key: string): boolean {
