@@ -39,6 +39,7 @@ export default function EnvVariablesPage() {
   const [copied, setCopied] = useState(false);
   const [showValues, setShowValues] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [totalSystemVars, setTotalSystemVars] = useState(0);
 
   useEffect(() => {
     fetchEnvVariables();
@@ -52,6 +53,7 @@ export default function EnvVariablesPage() {
       }
       const data = await response.json();
       setEnvVars(data.envVars || []);
+      setTotalSystemVars(data.totalSystemVars || 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
@@ -109,7 +111,10 @@ export default function EnvVariablesPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Environment Variables</h1>
             <p className="text-gray-600 mt-1">
-              Deployed environment configuration ({envVars.length} variables)
+              User-defined variables: <span className="font-semibold text-gray-900">{envVars.length}</span>
+              {totalSystemVars > 0 && (
+                <span className="text-gray-500"> • {totalSystemVars} system variables hidden</span>
+              )}
             </p>
           </div>
           
@@ -200,7 +205,8 @@ export default function EnvVariablesPage() {
         <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h3 className="text-blue-900 font-semibold text-sm mb-2">ℹ️ Information</h3>
           <ul className="text-blue-800 text-sm space-y-1">
-            <li>• These are the environment variables from the deployed application</li>
+            <li>• Only <strong>user-defined</strong> environment variables are shown (from .env.local)</li>
+            <li>• System environment variables are automatically filtered out</li>
             <li>• Sensitive values are masked by default - click &quot;Show Values&quot; to reveal</li>
             <li>• Use &quot;Copy All&quot; to copy all variables in KEY=VALUE format</li>
             <li>• Individual variables can be copied using the copy icon</li>
