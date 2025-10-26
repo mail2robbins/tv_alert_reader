@@ -10,6 +10,9 @@ interface MigrationStats {
   alerts: { exported: number; imported: number; skipped: number };
   placed_orders: { exported: number; imported: number; skipped: number };
   ticker_cache: { exported: number; imported: number; skipped: number };
+  users: { exported: number; imported: number; skipped: number };
+  user_sessions: { exported: number; imported: number; skipped: number };
+  user_audit_log: { exported: number; imported: number; skipped: number };
 }
 
 async function migrateDatabase() {
@@ -51,7 +54,10 @@ async function migrateDatabase() {
   const stats: MigrationStats = {
     alerts: { exported: 0, imported: 0, skipped: 0 },
     placed_orders: { exported: 0, imported: 0, skipped: 0 },
-    ticker_cache: { exported: 0, imported: 0, skipped: 0 }
+    ticker_cache: { exported: 0, imported: 0, skipped: 0 },
+    users: { exported: 0, imported: 0, skipped: 0 },
+    user_sessions: { exported: 0, imported: 0, skipped: 0 },
+    user_audit_log: { exported: 0, imported: 0, skipped: 0 }
   };
 
   try {
@@ -123,7 +129,55 @@ async function migrateDatabase() {
     }
     console.log(`✅ Cache: ${stats.ticker_cache.exported} exported, ${stats.ticker_cache.imported} imported, ${stats.ticker_cache.skipped} skipped\n`);
 
-    // Step 5: Verify migration
+    // Step 5: Export and migrate users
+    console.log('👥 Migrating users table...');
+    const users = await exportGenericTable(oldPool, 'users');
+    stats.users.exported = users.length;
+    
+    if (users.length > 0) {
+      const backupFile = path.join(backupDir, `users-${timestamp}.json`);
+      fs.writeFileSync(backupFile, JSON.stringify(users, null, 2));
+      console.log(`💾 Backup saved: ${backupFile}`);
+      
+      const imported = await importUsers(newPool, users);
+      stats.users.imported = imported.imported;
+      stats.users.skipped = imported.skipped;
+    }
+    console.log(`✅ Users: ${stats.users.exported} exported, ${stats.users.imported} imported, ${stats.users.skipped} skipped\n`);
+
+    // Step 6: Export and migrate user_sessions
+    console.log('🔐 Migrating user_sessions table...');
+    const sessions = await exportGenericTable(oldPool, 'user_sessions');
+    stats.user_sessions.exported = sessions.length;
+    
+    if (sessions.length > 0) {
+      const backupFile = path.join(backupDir, `user_sessions-${timestamp}.json`);
+      fs.writeFileSync(backupFile, JSON.stringify(sessions, null, 2));
+      console.log(`💾 Backup saved: ${backupFile}`);
+      
+      const imported = await importUserSessions(newPool, sessions);
+      stats.user_sessions.imported = imported.imported;
+      stats.user_sessions.skipped = imported.skipped;
+    }
+    console.log(`✅ Sessions: ${stats.user_sessions.exported} exported, ${stats.user_sessions.imported} imported, ${stats.user_sessions.skipped} skipped\n`);
+
+    // Step 7: Export and migrate user_audit_log
+    console.log('📋 Migrating user_audit_log table...');
+    const auditLog = await exportGenericTable(oldPool, 'user_audit_log');
+    stats.user_audit_log.exported = auditLog.length;
+    
+    if (auditLog.length > 0) {
+      const backupFile = path.join(backupDir, `user_audit_log-${timestamp}.json`);
+      fs.writeFileSync(backupFile, JSON.stringify(auditLog, null, 2));
+      console.log(`💾 Backup saved: ${backupFile}`);
+      
+      const imported = await importUserAuditLog(newPool, auditLog);
+      stats.user_audit_log.imported = imported.imported;
+      stats.user_audit_log.skipped = imported.skipped;
+    }
+    console.log(`✅ Audit Log: ${stats.user_audit_log.exported} exported, ${stats.user_audit_log.imported} imported, ${stats.user_audit_log.skipped} skipped\n`);
+
+    // Step 8: Verify migration
     console.log('🔍 Verifying migration...');
     await verifyMigration(newPool, stats);
 
@@ -132,6 +186,9 @@ async function migrateDatabase() {
     console.log(`   Alerts: ${stats.alerts.imported}/${stats.alerts.exported} migrated`);
     console.log(`   Orders: ${stats.placed_orders.imported}/${stats.placed_orders.exported} migrated`);
     console.log(`   Cache: ${stats.ticker_cache.imported}/${stats.ticker_cache.exported} migrated`);
+    console.log(`   Users: ${stats.users.imported}/${stats.users.exported} migrated`);
+    console.log(`   Sessions: ${stats.user_sessions.imported}/${stats.user_sessions.exported} migrated`);
+    console.log(`   Audit Log: ${stats.user_audit_log.imported}/${stats.user_audit_log.exported} migrated`);
     console.log(`\n💾 Backups saved in: ${backupDir}`);
 
   } catch (error) {
@@ -240,6 +297,11 @@ async function exportTickerCache(pool: Pool): Promise<any[]> {
   return result.rows;
 }
 
+async function exportGenericTable(pool: Pool, tableName: string): Promise<any[]> {
+  const result = await pool.query(`SELECT * FROM ${tableName}`);
+  return result.rows;
+}
+
 async function importAlerts(pool: Pool, alerts: any[]): Promise<{ imported: number; skipped: number }> {
   let imported = 0;
   let skipped = 0;
@@ -344,19 +406,118 @@ async function importTickerCache(pool: Pool, cache: any[]): Promise<{ imported: 
   return { imported, skipped };
 }
 
+async function importUsers(pool: Pool, users: any[]): Promise<{ imported: number; skipped: number }> {
+  let imported = 0;
+  let skipped = 0;
+
+  for (const user of users) {
+    try {
+      const columns = Object.keys(user);
+      const values = Object.values(user);
+      const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
+      
+      await pool.query(`
+        INSERT INTO users (${columns.join(', ')})
+        VALUES (${placeholders})
+        ON CONFLICT (id) DO NOTHING
+      `, values);
+      
+      const check = await pool.query('SELECT id FROM users WHERE id = $1', [user.id]);
+      if (check.rows.length > 0) {
+        imported++;
+      } else {
+        skipped++;
+      }
+    } catch (error) {
+      console.error(`Error importing user ${user.id}:`, error);
+      skipped++;
+    }
+  }
+
+  return { imported, skipped };
+}
+
+async function importUserSessions(pool: Pool, sessions: any[]): Promise<{ imported: number; skipped: number }> {
+  let imported = 0;
+  let skipped = 0;
+
+  for (const session of sessions) {
+    try {
+      const columns = Object.keys(session);
+      const values = Object.values(session);
+      const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
+      
+      await pool.query(`
+        INSERT INTO user_sessions (${columns.join(', ')})
+        VALUES (${placeholders})
+        ON CONFLICT (id) DO NOTHING
+      `, values);
+      
+      const check = await pool.query('SELECT id FROM user_sessions WHERE id = $1', [session.id]);
+      if (check.rows.length > 0) {
+        imported++;
+      } else {
+        skipped++;
+      }
+    } catch (error) {
+      console.error(`Error importing session ${session.id}:`, error);
+      skipped++;
+    }
+  }
+
+  return { imported, skipped };
+}
+
+async function importUserAuditLog(pool: Pool, logs: any[]): Promise<{ imported: number; skipped: number }> {
+  let imported = 0;
+  let skipped = 0;
+
+  for (const log of logs) {
+    try {
+      const columns = Object.keys(log);
+      const values = Object.values(log);
+      const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
+      
+      await pool.query(`
+        INSERT INTO user_audit_log (${columns.join(', ')})
+        VALUES (${placeholders})
+        ON CONFLICT (id) DO NOTHING
+      `, values);
+      
+      const check = await pool.query('SELECT id FROM user_audit_log WHERE id = $1', [log.id]);
+      if (check.rows.length > 0) {
+        imported++;
+      } else {
+        skipped++;
+      }
+    } catch (error) {
+      console.error(`Error importing audit log ${log.id}:`, error);
+      skipped++;
+    }
+  }
+
+  return { imported, skipped };
+}
+
 async function verifyMigration(pool: Pool, stats: MigrationStats): Promise<void> {
   const alertsCount = await pool.query('SELECT COUNT(*) FROM alerts');
   const ordersCount = await pool.query('SELECT COUNT(*) FROM placed_orders');
   const cacheCount = await pool.query('SELECT COUNT(*) FROM ticker_cache');
+  const usersCount = await pool.query('SELECT COUNT(*) FROM users');
+  const sessionsCount = await pool.query('SELECT COUNT(*) FROM user_sessions');
+  const auditCount = await pool.query('SELECT COUNT(*) FROM user_audit_log');
 
   console.log(`   Alerts in new DB: ${alertsCount.rows[0].count}`);
   console.log(`   Orders in new DB: ${ordersCount.rows[0].count}`);
   console.log(`   Cache entries in new DB: ${cacheCount.rows[0].count}`);
+  console.log(`   Users in new DB: ${usersCount.rows[0].count}`);
+  console.log(`   Sessions in new DB: ${sessionsCount.rows[0].count}`);
+  console.log(`   Audit logs in new DB: ${auditCount.rows[0].count}`);
 
   // Verify indexes exist
   const indexes = await pool.query(`
     SELECT indexname FROM pg_indexes 
-    WHERE tablename IN ('alerts', 'placed_orders', 'ticker_cache')
+    WHERE tablename IN ('alerts', 'placed_orders', 'ticker_cache', 'users', 'user_sessions', 'user_audit_log')
     ORDER BY indexname
   `);
   console.log(`   Indexes created: ${indexes.rows.length}`);
