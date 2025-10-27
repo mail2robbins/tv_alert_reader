@@ -334,7 +334,7 @@ export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlace
 
           {/* Order Type */}
           <div>
-            <label htmlFor="orderType" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="orderType" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Order Type
             </label>
             <div
@@ -354,7 +354,7 @@ export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlace
                   'w-1/2 sm:w-auto',
                   formData.orderType === 'BUY'
                     ? 'bg-green-600 text-white hover:bg-green-700 ring-1 ring-inset ring-green-400'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 border dark:border-gray-600'
                 ].join(' ')}
               >
                 <svg
@@ -373,11 +373,11 @@ export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlace
                 aria-pressed={formData.orderType === 'SELL'}
                 onClick={() => handleInputChange('orderType', 'SELL')}
                 className={[
-                  'px-4 py-2 text-sm font-medium focus:outline-none border-l border-gray-300 inline-flex items-center gap-2',
+                  'px-4 py-2 text-sm font-medium focus:outline-none border-l border-gray-300 dark:border-gray-600 inline-flex items-center gap-2',
                   'w-1/2 sm:w-auto',
                   formData.orderType === 'SELL'
                     ? 'bg-red-600 text-white hover:bg-red-700 ring-1 ring-inset ring-red-400'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
                 ].join(' ')}
               >
                 <svg
@@ -396,7 +396,7 @@ export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlace
 
           {/* Execution Type */}
           <div>
-            <label htmlFor="executionType" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="executionType" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Execution Type
             </label>
             <div
@@ -416,7 +416,7 @@ export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlace
                   'w-1/2 sm:w-auto',
                   formData.executionType === 'MARKET'
                     ? 'bg-blue-600 text-white hover:bg-blue-700 ring-1 ring-inset ring-blue-400'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 border dark:border-gray-600'
                 ].join(' ')}
               >
                 <svg
@@ -435,11 +435,11 @@ export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlace
                 aria-pressed={formData.executionType === 'LIMIT'}
                 onClick={() => handleInputChange('executionType', 'LIMIT')}
                 className={[
-                  'px-4 py-2 text-sm font-medium focus:outline-none border-l border-gray-300 inline-flex items-center gap-2',
+                  'px-4 py-2 text-sm font-medium focus:outline-none border-l border-gray-300 dark:border-gray-600 inline-flex items-center gap-2',
                   'w-1/2 sm:w-auto',
                   formData.executionType === 'LIMIT'
                     ? 'bg-indigo-600 text-white hover:bg-indigo-700 ring-1 ring-inset ring-indigo-400'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
                 ].join(' ')}
               >
                 <svg

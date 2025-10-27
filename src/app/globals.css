@@ -28,26 +28,26 @@ html.dark body > div {
   background-color: #0f172a !important;
 }
 
-/* Light mode - Card/Component backgrounds (white with shadow) */
-html:not(.dark) div[class*="bg-white"],
-html:not(.dark) div[class*="bg-gray-50"],
-html:not(.dark) .bg-white,
-html:not(.dark) .bg-gray-50,
-html:not(.dark) [class*="rounded-lg"][class*="shadow"],
-html:not(.dark) [class*="rounded"][class*="shadow"] {
+/* Light mode - Card/Component backgrounds (white with shadow) - exclude buttons */
+html:not(.dark) div[class*="bg-white"]:not(button),
+html:not(.dark) div[class*="bg-gray-50"]:not(button),
+html:not(.dark) .bg-white:not(button),
+html:not(.dark) .bg-gray-50:not(button),
+html:not(.dark) [class*="rounded-lg"][class*="shadow"]:not(button),
+html:not(.dark) [class*="rounded"][class*="shadow"]:not(button) {
   background-color: #ffffff !important;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1) !important;
   border: 1px solid #e5e7eb !important;
 }
 
-html:not(.dark) div[class*="bg-gray-100"],
-html:not(.dark) .bg-gray-100 {
+html:not(.dark) div[class*="bg-gray-100"]:not(button),
+html:not(.dark) .bg-gray-100:not(button) {
   background-color: #f9fafb !important;
   border: 1px solid #e5e7eb !important;
 }
 
-html:not(.dark) div[class*="bg-gray-200"],
-html:not(.dark) .bg-gray-200 {
+html:not(.dark) div[class*="bg-gray-200"]:not(button),
+html:not(.dark) .bg-gray-200:not(button) {
   background-color: #e5e7eb !important;
 }
 
@@ -89,6 +89,17 @@ html:not(.dark) .bg-indigo-50:not(button) {
 }
 
 /* Light mode - Button backgrounds (keep original Tailwind colors) */
+html:not(.dark) button[class*="bg-blue-600"],
+html:not(.dark) button.bg-blue-600 {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) button[class*="bg-blue-600"]:hover:not(:disabled),
+html:not(.dark) button.bg-blue-600:hover:not(:disabled) {
+  background-color: #1d4ed8 !important;
+}
+
 html:not(.dark) button[class*="bg-blue-100"],
 html:not(.dark) button.bg-blue-100 {
   background-color: #dbeafe !important;
@@ -97,6 +108,38 @@ html:not(.dark) button.bg-blue-100 {
 html:not(.dark) button[class*="bg-gray-100"],
 html:not(.dark) button.bg-gray-100 {
   background-color: #f3f4f6 !important;
+}
+
+html:not(.dark) button[class*="bg-white"],
+html:not(.dark) button.bg-white {
+  background-color: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+}
+
+html:not(.dark) button[class*="bg-white"]:hover:not(:disabled),
+html:not(.dark) button.bg-white:hover:not(:disabled) {
+  background-color: #f9fafb !important;
+}
+
+html:not(.dark) button[class*="bg-gray-50"],
+html:not(.dark) button.bg-gray-50 {
+  background-color: #f9fafb !important;
+}
+
+html:not(.dark) button[class*="bg-gray-50"]:hover:not(:disabled),
+html:not(.dark) button.bg-gray-50:hover:not(:disabled) {
+  background-color: #f3f4f6 !important;
+}
+
+html:not(.dark) button[class*="bg-green-600"],
+html:not(.dark) button.bg-green-600 {
+  background-color: #16a34a !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) button[class*="bg-green-600"]:hover:not(:disabled),
+html:not(.dark) button.bg-green-600:hover:not(:disabled) {
+  background-color: #15803d !important;
 }
 
 /* Dark mode - Card/Component backgrounds (elevated with shadow) */
@@ -127,6 +170,61 @@ html.dark .bg-gray-800 {
   background-color: #1e293b !important;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3) !important;
   border: 1px solid #334155 !important;
+}
+
+/* Dark mode - Button backgrounds (keep original Tailwind colors) */
+html.dark button[class*="bg-blue-600"],
+html.dark button.bg-blue-600 {
+  background-color: #3b82f6 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3) !important;
+}
+
+html.dark button[class*="bg-blue-600"]:hover:not(:disabled),
+html.dark button.bg-blue-600:hover:not(:disabled) {
+  background-color: #2563eb !important;
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.4) !important;
+}
+
+html.dark button[class*="bg-gray-700"],
+html.dark button.bg-gray-700 {
+  background-color: #374151 !important;
+  border: 1px solid #4b5563 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark button[class*="bg-gray-700"]:hover:not(:disabled),
+html.dark button.bg-gray-700:hover:not(:disabled) {
+  background-color: #4b5563 !important;
+  border-color: #6b7280 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4) !important;
+}
+
+html.dark button[class*="bg-white"],
+html.dark button.bg-white {
+  background-color: #374151 !important;
+  border: 1px solid #4b5563 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark button[class*="bg-white"]:hover:not(:disabled),
+html.dark button.bg-white:hover:not(:disabled) {
+  background-color: #4b5563 !important;
+  border-color: #6b7280 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4) !important;
+}
+
+html.dark button[class*="bg-green-600"],
+html.dark button.bg-green-600 {
+  background-color: #16a34a !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 4px rgba(22, 163, 74, 0.3) !important;
+}
+
+html.dark button[class*="bg-green-600"]:hover:not(:disabled),
+html.dark button.bg-green-600:hover:not(:disabled) {
+  background-color: #15803d !important;
+  box-shadow: 0 4px 6px rgba(22, 163, 74, 0.4) !important;
 }
 
 /* Dark mode - Colored backgrounds (darker shades) */
@@ -168,8 +266,10 @@ html.dark [class*="bg-gradient"] {
 
 /* Light mode - Button text colors (override general text rules) */
 html:not(.dark) button[class*="text-gray-800"],
-html:not(.dark) button.text-gray-800 {
-  color: #1f2937 !important;
+html:not(.dark) button.text-gray-800,
+html:not(.dark) button[class*="text-gray-700"],
+html:not(.dark) button.text-gray-700 {
+  color: #374151 !important;
 }
 
 html:not(.dark) button[class*="text-gray-400"],
@@ -183,7 +283,11 @@ html:not(.dark) button.text-blue-800 {
 }
 
 html:not(.dark) button[class*="text-white"],
-html:not(.dark) button.text-white {
+html:not(.dark) button.text-white,
+html:not(.dark) button[class*="bg-blue-600"],
+html:not(.dark) button.bg-blue-600,
+html:not(.dark) button[class*="bg-green-600"],
+html:not(.dark) button.bg-green-600 {
   color: #ffffff !important;
 }
 
@@ -191,6 +295,11 @@ html:not(.dark) button.text-white {
 html.dark button[class*="text-gray-200"],
 html.dark button.text-gray-200 {
   color: #e5e7eb !important;
+}
+
+html.dark button[class*="text-gray-300"],
+html.dark button.text-gray-300 {
+  color: #d1d5db !important;
 }
 
 html.dark button[class*="text-gray-400"],
@@ -209,7 +318,11 @@ html.dark button.text-blue-200 {
 }
 
 html.dark button[class*="text-white"],
-html.dark button.text-white {
+html.dark button.text-white,
+html.dark button[class*="bg-blue-600"],
+html.dark button.bg-blue-600,
+html.dark button[class*="bg-green-600"],
+html.dark button.bg-green-600 {
   color: #ffffff !important;
 }
 
@@ -253,7 +366,7 @@ html.dark textarea {
   color: #f3f4f6 !important;
 }
 
-/* Light mode - Text colors */
+/* Light mode - Text colors (exclude buttons) */
 html:not(.dark) h1,
 html:not(.dark) h2,
 html:not(.dark) h3,
@@ -263,10 +376,10 @@ html:not(.dark) h6 {
   color: #111827 !important;
 }
 
-html:not(.dark) p,
-html:not(.dark) span,
-html:not(.dark) label,
-html:not(.dark) div {
+html:not(.dark) p:not(button *),
+html:not(.dark) span:not(button *),
+html:not(.dark) label:not(button *),
+html:not(.dark) div:not(button):not(button *) {
   color: #374151 !important;
 }
 
@@ -279,7 +392,7 @@ html:not(.dark) pre {
   background-color: #f3f4f6 !important;
 }
 
-/* Dark mode - Text colors */
+/* Dark mode - Text colors (exclude buttons) */
 html.dark h1,
 html.dark h2,
 html.dark h3,
@@ -289,10 +402,10 @@ html.dark h6 {
   color: #f9fafb !important;
 }
 
-html.dark p,
-html.dark span,
-html.dark label,
-html.dark div {
+html.dark p:not(button *),
+html.dark span:not(button *),
+html.dark label:not(button *),
+html.dark div:not(button):not(button *) {
   color: #e5e7eb !important;
 }
 
@@ -447,6 +560,28 @@ html.dark tbody tr:hover {
 html.dark td {
   color: #f3f4f6 !important;
   border-color: #475569 !important;
+}
+
+/* Light mode - Financial color coding (Stop Loss = Red, Target = Green) */
+html:not(.dark) td[class*="text-red-600"],
+html:not(.dark) .text-red-600 {
+  color: #dc2626 !important;
+}
+
+html:not(.dark) td[class*="text-green-600"],
+html:not(.dark) .text-green-600 {
+  color: #16a34a !important;
+}
+
+/* Dark mode - Financial color coding (Stop Loss = Red, Target = Green) */
+html.dark td[class*="text-red-600"],
+html.dark .text-red-600 {
+  color: #f87171 !important;
+}
+
+html.dark td[class*="text-green-600"],
+html.dark .text-green-600 {
+  color: #4ade80 !important;
 }
 
 /* React DatePicker Styles */
