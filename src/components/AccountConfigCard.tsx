@@ -414,9 +414,9 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
                   <div className="text-gray-500 text-xs">Rebase TP/SL</div>
                   <div className="font-bold text-lg text-gray-900">
                     {account.rebaseTpAndSl ? (
-                      <span className="text-blue-600">Enabled</span>
+                      <span className="text-green-600">Enabled</span>
                     ) : (
-                      <span className="text-gray-600">Disabled</span>
+                      <span className="text-red-600">Disabled</span>
                     )}
                   </div>
                 </div>
