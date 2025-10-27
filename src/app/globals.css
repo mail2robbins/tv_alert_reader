@@ -145,10 +145,10 @@ html:not(.dark) button.bg-green-600:hover:not(:disabled) {
 /* Dark mode - Card/Component backgrounds (elevated with shadow) */
 html.dark div[class*="bg-white"],
 html.dark div[class*="bg-gray-50"],
-html.dark .bg-white,
-html.dark .bg-gray-50,
-html.dark [class*="rounded-lg"][class*="shadow"],
-html.dark [class*="rounded"][class*="shadow"] {
+html.dark .bg-white:not(button),
+html.dark .bg-gray-50:not(button),
+html.dark [class*="rounded-lg"][class*="shadow"]:not(button),
+html.dark [class*="rounded"][class*="shadow"]:not(button) {
   background-color: #1e293b !important;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3) !important;
   border: 1px solid #334155 !important;
