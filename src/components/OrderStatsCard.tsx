@@ -18,7 +18,7 @@ export default function OrderStatsCard({ title, value, subtitle, icon, color = '
   };
 
   return (
-    <div className="bg-white overflow-hidden shadow rounded-lg">
+    <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
       <div className="p-5">
         <div className="flex items-center">
           <div className="flex-shrink-0">
@@ -30,15 +30,15 @@ export default function OrderStatsCard({ title, value, subtitle, icon, color = '
           </div>
           <div className="ml-5 w-0 flex-1">
             <dl>
-              <dt className="text-sm font-medium text-gray-500 truncate">
+              <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                 {title}
               </dt>
               <dd className="flex items-baseline">
-                <div className="text-2xl font-semibold text-gray-900">
+                <div className="text-2xl font-semibold text-gray-900 dark:text-white">
                   {value}
                 </div>
                 {subtitle && (
-                  <div className="ml-2 text-sm text-gray-500">
+                  <div className="ml-2 text-sm text-gray-500 dark:text-gray-400">
                     {subtitle}
                   </div>
                 )}

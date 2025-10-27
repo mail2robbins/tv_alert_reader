@@ -15,6 +15,7 @@ import ExternalWebhookConfig from '@/components/ExternalWebhookConfig';
 import TickerInput from '@/components/TickerInput';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import ChangePassword from '@/components/ChangePassword';
+import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { useAuth } from '@/contexts/AuthContext';
 import { PlacedOrder } from '@/lib/orderTracker';
 
@@ -259,34 +260,37 @@ export default function Home() {
 
   return (
     <ProtectedRoute requireApproval={true}>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-6xl mx-auto px-6 py-8">
             {/* Header */}
             <div className="mb-8">
               <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
                 <div className="flex-1">
-                  <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                    <svg className="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 32 32">
-                      <rect width="32" height="32" rx="6" fill="currentColor"/>
-                      <path d="M4 24 L8 20 L12 22 L16 16 L20 18 L24 12 L28 14" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                      <circle cx="8" cy="20" r="2" fill="#10b981"/>
-                      <circle cx="16" cy="16" r="2" fill="#10b981"/>
-                      <circle cx="24" cy="12" r="2" fill="#10b981"/>
-                      <path d="M24 6 C24.5 6 25 6.5 25 7 L25 9 C25 9.5 24.5 10 24 10 L22 10 C21.5 10 21 9.5 21 9 L21 7 C21 6.5 21.5 6 22 6 L24 6 Z" fill="#f59e0b"/>
-                      <circle cx="26" cy="4" r="2" fill="#ef4444"/>
-                    </svg>
-                    TradingView Alert Reader
-                  </h1>
-                  <p className="mt-2 text-gray-600">
+                  <div className="flex items-center justify-between mb-4">
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                      <svg className="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 32 32">
+                        <rect width="32" height="32" rx="6" fill="currentColor"/>
+                        <path d="M4 24 L8 20 L12 22 L16 16 L20 18 L24 12 L28 14" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                        <circle cx="8" cy="20" r="2" fill="#10b981"/>
+                        <circle cx="16" cy="16" r="2" fill="#10b981"/>
+                        <circle cx="24" cy="12" r="2" fill="#10b981"/>
+                        <path d="M24 6 C24.5 6 25 6.5 25 7 L25 9 C25 9.5 24.5 10 24 10 L22 10 C21.5 10 21 9.5 21 9 L21 7 C21 6.5 21.5 6 22 6 L24 6 Z" fill="#f59e0b"/>
+                        <circle cx="26" cy="4" r="2" fill="#ef4444"/>
+                      </svg>
+                      TradingView Alert Reader
+                    </h1>
+                    <ThemeSwitch />
+                  </div>
+                  <p className="mt-2 text-gray-600 dark:text-gray-300">
                     Monitor and analyze your TradingView alerts in real-time
                   </p>
-                {user && (
-                  <p className="mt-1 text-sm text-gray-500">
-                    Welcome, {user.fullName} ({user.username})
-                  </p>
-                )}
-              </div>
+                  {user && (
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      Welcome, {user.fullName} ({user.username})
+                    </p>
+                  )}
+                </div>
               <div className="flex flex-col sm:flex-row gap-3 lg:flex-shrink-0">
                 <button
                   onClick={() => router.push('/manual-order')}
@@ -387,7 +391,7 @@ export default function Home() {
         {/* Alerts Section */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Trading Alerts</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Trading Alerts</h2>
             <button
               onClick={() => {
                 // Build query parameters based on current filters
@@ -428,7 +432,7 @@ export default function Home() {
         {/* Orders Section */}
         <div className="mt-8">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Trading Orders</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Trading Orders</h2>
             <div className="flex gap-3">
               <button
                 onClick={() => {
@@ -529,8 +533,8 @@ export default function Home() {
               />
               
               {/* Ticker Filter */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Filter by Ticker</h3>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Filter by Ticker</h3>
                 <TickerInput
                   value={orderTicker}
                   onChange={handleOrderTickerChange}
@@ -565,7 +569,7 @@ export default function Home() {
                       setOrderTicker('');
                       fetchOrders();
                     }}
-                    className="px-4 py-2 bg-gray-100 text-gray-800 rounded-md hover:bg-gray-200 transition-colors"
+                    className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                   >
                     Clear Ticker
                   </button>

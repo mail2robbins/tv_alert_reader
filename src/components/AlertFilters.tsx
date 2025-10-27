@@ -64,12 +64,12 @@ export default function AlertFilters({ onLoadData, isLoading, availableStrategie
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">Additional Filters</h3>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Additional Filters</h3>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Ticker Symbol
           </label>
           <input
@@ -77,18 +77,18 @@ export default function AlertFilters({ onLoadData, isLoading, availableStrategie
             value={ticker}
             onChange={(e) => handleInputChange('ticker', e.target.value.toUpperCase())}
             placeholder="e.g., AAPL (partial match)"
-            className="w-full px-3 py-2 border border-gray-400 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
+            className="w-full px-3 py-2 border border-gray-400 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-500 dark:placeholder-gray-400"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Signal Type
           </label>
           <select
             value={signal}
             onChange={(e) => handleInputChange('signal', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-400 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
+            className="w-full px-3 py-2 border border-gray-400 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-500 dark:placeholder-gray-400"
           >
             <option value="">All Signals</option>
             <option value="BUY">BUY</option>
@@ -98,13 +98,13 @@ export default function AlertFilters({ onLoadData, isLoading, availableStrategie
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Strategy
           </label>
           <select
             value={strategy}
             onChange={(e) => handleInputChange('strategy', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-400 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
+            className="w-full px-3 py-2 border border-gray-400 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-500 dark:placeholder-gray-400"
           >
             <option value="">All Strategies</option>
             {availableStrategies.map((strategyName) => (
@@ -141,7 +141,7 @@ export default function AlertFilters({ onLoadData, isLoading, availableStrategie
         </button>
         <button
           onClick={clearFilters}
-          className="px-4 py-2 text-sm bg-gray-100 text-gray-800 rounded-md hover:bg-gray-200 transition-colors"
+          className="px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
         >
           Clear All Filters
         </button>
