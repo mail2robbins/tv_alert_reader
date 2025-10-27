@@ -1,14 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import ManualOrderPlacement from '@/components/ManualOrderPlacement';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { ThemeSwitch } from '@/components/ThemeSwitch';
 
 export default function ManualOrderPage() {
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [orderResult, setOrderResult] = useState<Record<string, unknown> | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleOrderPlaced = (result: unknown) => {
     setOrderResult(result as Record<string, unknown>);
@@ -28,12 +35,13 @@ export default function ManualOrderPage() {
               <div className="flex-1">
                 <button
                   onClick={() => router.push('/')}
-                  className="flex items-center text-gray-900 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white mb-4 cursor-pointer"
+                  className="flex items-center font-semibold text-black dark:text-gray-300 hover:text-blue-600 dark:hover:text-white mb-4 cursor-pointer"
+                  style={{ color: mounted && resolvedTheme === 'dark' ? '#d1d5db' : '#000000' }}
                 >
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
-                  Back to Dashboard
+                  <span style={{ color: mounted && resolvedTheme === 'dark' ? '#d1d5db' : '#000000' }}>Back to Dashboard</span>
                 </button>
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
                   <svg className="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 32 32">

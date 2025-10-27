@@ -264,33 +264,6 @@ html.dark [class*="bg-gradient"] {
   background-color: #1e293b !important;
 }
 
-/* Light mode - Button text colors (override general text rules) */
-html:not(.dark) button[class*="text-gray-800"],
-html:not(.dark) button.text-gray-800,
-html:not(.dark) button[class*="text-gray-700"],
-html:not(.dark) button.text-gray-700 {
-  color: #374151 !important;
-}
-
-html:not(.dark) button[class*="text-gray-400"],
-html:not(.dark) button.text-gray-400 {
-  color: #9ca3af !important;
-}
-
-html:not(.dark) button[class*="text-blue-800"],
-html:not(.dark) button.text-blue-800 {
-  color: #1e40af !important;
-}
-
-html:not(.dark) button[class*="text-white"],
-html:not(.dark) button.text-white,
-html:not(.dark) button[class*="bg-blue-600"],
-html:not(.dark) button.bg-blue-600,
-html:not(.dark) button[class*="bg-green-600"],
-html:not(.dark) button.bg-green-600 {
-  color: #ffffff !important;
-}
-
 /* Dark mode - Button text colors (override general text rules) */
 html.dark button[class*="text-gray-200"],
 html.dark button.text-gray-200 {
@@ -381,6 +354,47 @@ html:not(.dark) span:not(button *),
 html:not(.dark) label:not(button *),
 html:not(.dark) div:not(button):not(button *) {
   color: #374151 !important;
+}
+
+/* Light mode - Button text colors (override general text rules) */
+html:not(.dark) button[class*="text-black"],
+html:not(.dark) button.text-black,
+html:not(.dark) button[class*="text-black"] *,
+html:not(.dark) button.text-black * {
+  color: #000000 !important;
+}
+
+html:not(.dark) button[class*="text-gray-900"],
+html:not(.dark) button.text-gray-900,
+html:not(.dark) button[class*="text-gray-900"] *,
+html:not(.dark) button.text-gray-900 * {
+  color: #111827 !important;
+}
+
+html:not(.dark) button[class*="text-gray-800"],
+html:not(.dark) button.text-gray-800,
+html:not(.dark) button[class*="text-gray-700"],
+html:not(.dark) button.text-gray-700 {
+  color: #374151 !important;
+}
+
+html:not(.dark) button[class*="text-gray-400"],
+html:not(.dark) button.text-gray-400 {
+  color: #9ca3af !important;
+}
+
+html:not(.dark) button[class*="text-blue-800"],
+html:not(.dark) button.text-blue-800 {
+  color: #1e40af !important;
+}
+
+html:not(.dark) button[class*="text-white"],
+html:not(.dark) button.text-white,
+html:not(.dark) button[class*="bg-blue-600"],
+html:not(.dark) button.bg-blue-600,
+html:not(.dark) button[class*="bg-green-600"],
+html:not(.dark) button.bg-green-600 {
+  color: #ffffff !important;
 }
 
 /* Light mode - Monospace/Code text (URLs, code snippets) */
