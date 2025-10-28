@@ -530,7 +530,8 @@ export async function POST(request: NextRequest) {
           minTrailJump: parseFloat(process.env.MIN_TRAIL_JUMP || '0.05'),
           rebaseTpAndSl: process.env.REBASE_TP_AND_SL === 'true',
           rebaseThresholdPercentage: parseFloat(process.env.REBASE_THRESHOLD_PERCENTAGE || '0.1'),
-          allowDuplicateTickers: process.env.ALLOW_DUPLICATE_TICKERS === 'true'
+          allowDuplicateTickers: process.env.ALLOW_DUPLICATE_TICKERS === 'true',
+          orderType: process.env.DHAN_ORDER_TYPE || 'MARKET'
         };
 
         if (legacyAccountConfig.rebaseTpAndSl) {
