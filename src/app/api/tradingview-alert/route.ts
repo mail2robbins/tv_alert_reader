@@ -180,8 +180,8 @@ export async function POST(request: NextRequest) {
               const dhanResponses = await placeDhanOrderOnAllAccounts(alert, {
                 useAutoPositionSizing: true,
                 exchangeSegment: process.env.DHAN_EXCHANGE_SEGMENT || 'NSE_EQ',
-                productType: process.env.DHAN_PRODUCT_TYPE || 'INTRADAY',
-                orderType: process.env.DHAN_ORDER_TYPE || 'MARKET'
+                productType: process.env.DHAN_PRODUCT_TYPE || 'INTRADAY'
+                // orderType is now handled per-account in placeDhanOrderForAccount
               });
               
               const placedOrders = await storeMultiplePlacedOrders(

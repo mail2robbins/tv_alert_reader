@@ -20,6 +20,7 @@ interface DhanAccountConfig {
   rebaseTpAndSl: boolean;
   rebaseThresholdPercentage: number;
   allowDuplicateTickers: boolean;
+  orderType: string;
 }
 
 interface MultiAccountConfig {
@@ -306,12 +307,13 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
                 </div>
               </div>
 
-              {/* DHAN Order Type */}
+              {/* DHAN Order Type - Now Account-Specific */}
               <div className="bg-white rounded-lg p-3 border border-gray-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-xs text-gray-500 mb-1">Order Type</div>
+                    <div className="text-xs text-gray-500 mb-1">Order Type (Legacy)</div>
                     <div className="text-sm font-medium text-gray-900">DHAN_ORDER_TYPE</div>
+                    <div className="text-xs text-blue-600 mt-1">⚠️ Now configured per-account</div>
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
@@ -432,6 +434,14 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
                     ) : (
                       <span className="text-red-600">No</span>
                     )}
+                  </div>
+                </div>
+                <div className="bg-white p-3 rounded border">
+                  <div className="text-gray-500 text-xs">Order Type</div>
+                  <div className="font-bold text-lg text-gray-900">
+                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                      {account.orderType || 'MARKET'}
+                    </span>
                   </div>
                 </div>
               </div>

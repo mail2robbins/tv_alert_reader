@@ -316,8 +316,8 @@ export async function placeDhanOrderForAccount(
     };
   }
   
-  // Determine order type and price
-  const orderType = orderConfig?.orderType || DHAN_ORDER_TYPES_ORDER.MARKET;
+  // Determine order type and price - use account-specific order type for alert-based orders
+  const orderType = orderConfig?.orderType || accountConfig.orderType || DHAN_ORDER_TYPES_ORDER.MARKET;
   const orderPrice = orderType === DHAN_ORDER_TYPES_ORDER.MARKET ? 0 : alert.price;
   
   // Prepare order request

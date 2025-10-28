@@ -18,6 +18,7 @@ export interface DhanAccountConfig {
   rebaseTpAndSl: boolean;
   rebaseThresholdPercentage: number;
   allowDuplicateTickers: boolean;
+  orderType: string;
 }
 
 export interface MultiAccountConfig {
@@ -53,7 +54,8 @@ export function loadAccountConfigurations(): MultiAccountConfig {
         minTrailJump: parseFloat(process.env[`MIN_TRAIL_JUMP_${i}`] || '0.05'),
         rebaseTpAndSl: process.env[`REBASE_TP_AND_SL_${i}`] === 'true',
         rebaseThresholdPercentage: parseFloat(process.env[`REBASE_THRESHOLD_PERCENTAGE_${i}`] || '0.1'),
-        allowDuplicateTickers: process.env[`ALLOW_DUPLICATE_TICKERS_${i}`] === 'true'
+        allowDuplicateTickers: process.env[`ALLOW_DUPLICATE_TICKERS_${i}`] === 'true',
+        orderType: process.env[`DHAN_ORDER_TYPE_${i}`] || process.env.DHAN_ORDER_TYPE || 'MARKET'
       };
       
       accounts.push(account);
@@ -83,7 +85,8 @@ export function loadAccountConfigurations(): MultiAccountConfig {
         minTrailJump: parseFloat(process.env.MIN_TRAIL_JUMP || '0.05'),
         rebaseTpAndSl: process.env.REBASE_TP_AND_SL === 'true',
         rebaseThresholdPercentage: parseFloat(process.env.REBASE_THRESHOLD_PERCENTAGE || '0.1'),
-        allowDuplicateTickers: process.env.ALLOW_DUPLICATE_TICKERS === 'true'
+        allowDuplicateTickers: process.env.ALLOW_DUPLICATE_TICKERS === 'true',
+        orderType: process.env.DHAN_ORDER_TYPE || 'MARKET'
       };
       
       accounts.push(legacyAccount);
