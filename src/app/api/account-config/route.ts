@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const includeValidation = searchParams.get('includeValidation') === 'true';
     const includeSummary = searchParams.get('includeSummary') === 'true';
 
-    const config = loadAccountConfigurations();
+    const config = await loadAccountConfigurations();
     const alertSource = getAlertSource();
     
     // Get DHAN configuration values
@@ -24,11 +24,11 @@ export async function GET(request: NextRequest) {
     };
     
     const responseData: {
-      config: typeof config;
+      config: Awaited<ReturnType<typeof loadAccountConfigurations>>;
       alertSource: string;
       dhanConfig: typeof dhanConfig;
-      validation?: ReturnType<typeof validateAllAccountConfigurations>;
-      summary?: ReturnType<typeof getConfigurationSummary>;
+      validation?: Awaited<ReturnType<typeof validateAllAccountConfigurations>>;
+      summary?: Awaited<ReturnType<typeof getConfigurationSummary>>;
     } = {
       config,
       alertSource,
@@ -36,11 +36,11 @@ export async function GET(request: NextRequest) {
     };
 
     if (includeValidation) {
-      responseData.validation = validateAllAccountConfigurations();
+      responseData.validation = await validateAllAccountConfigurations();
     }
 
     if (includeSummary) {
-      responseData.summary = getConfigurationSummary();
+      responseData.summary = await getConfigurationSummary();
     }
 
     return NextResponse.json(

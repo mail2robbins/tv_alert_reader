@@ -177,6 +177,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const getAuthToken = (): string | null => {
+    return token;
+  };
+
   const value: AuthContextType = {
     user,
     token,
@@ -184,6 +188,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     register,
     changePassword,
     logout,
+    getAuthToken,
     isLoading,
     isAuthenticated
   };

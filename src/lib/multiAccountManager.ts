@@ -26,70 +26,98 @@ export interface MultiAccountConfig {
   activeAccounts: DhanAccountConfig[];
 }
 
-// Load account configuration from environment variables
-export function loadAccountConfigurations(): MultiAccountConfig {
-  const accounts: DhanAccountConfig[] = [];
+// Load account configuration from database with fallback to environment variables
+export async function loadAccountConfigurations(): Promise<MultiAccountConfig> {
+  let accounts: DhanAccountConfig[] = [];
   
-  // Check for numbered account configurations (1-5)
-  for (let i = 1; i <= 5; i++) {
-    const accessToken = process.env[`DHAN_ACCESS_TOKEN_${i}`];
-    const clientId = process.env[`DHAN_CLIENT_ID_${i}`];
-    
-    // Only add account if both access token and client ID are provided
-    if (accessToken && clientId) {
-      const account: DhanAccountConfig = {
-        accountId: i,
-        accessToken,
-        clientId,
-        availableFunds: parseFloat(process.env[`AVAILABLE_FUNDS_${i}`] || '20000'),
-        leverage: parseFloat(process.env[`LEVERAGE_${i}`] || '2'),
-        maxPositionSize: parseFloat(process.env[`MAX_POSITION_SIZE_${i}`] || '0.1'),
-        minOrderValue: parseFloat(process.env[`MIN_ORDER_VALUE_${i}`] || '1000'),
-        maxOrderValue: parseFloat(process.env[`MAX_ORDER_VALUE_${i}`] || '5000'),
-        stopLossPercentage: parseFloat(process.env[`STOP_LOSS_PERCENTAGE_${i}`] || '0.01'),
-        targetPricePercentage: parseFloat(process.env[`TARGET_PRICE_PERCENTAGE_${i}`] || '0.015'),
-        riskOnCapital: parseFloat(process.env[`RISK_ON_CAPITAL_${i}`] || '1.0'),
-        isActive: true,
-        enableTrailingStopLoss: process.env[`ENABLE_TRAILING_STOP_LOSS_${i}`] === 'true',
-        minTrailJump: parseFloat(process.env[`MIN_TRAIL_JUMP_${i}`] || '0.05'),
-        rebaseTpAndSl: process.env[`REBASE_TP_AND_SL_${i}`] === 'true',
-        rebaseThresholdPercentage: parseFloat(process.env[`REBASE_THRESHOLD_PERCENTAGE_${i}`] || '0.1'),
-        allowDuplicateTickers: process.env[`ALLOW_DUPLICATE_TICKERS_${i}`] === 'true',
-        orderType: process.env[`DHAN_ORDER_TYPE_${i}`] || process.env.DHAN_ORDER_TYPE || 'MARKET'
-      };
+  // Only load from database on server side
+  if (typeof window === 'undefined') {
+    try {
+      // Try to fetch from internal API endpoint (server-side only)
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:5001';
+      const response = await fetch(`${baseUrl}/api/account-settings/config?activeOnly=false`, {
+        cache: 'no-store' // Don't cache to get fresh data
+      });
       
-      accounts.push(account);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data.accounts.length > 0) {
+          accounts = data.data.accounts;
+          console.log(`Loaded ${accounts.length} account(s) from database via API`);
+        }
+      } else {
+        console.warn('Failed to fetch from API, will try fallback');
+      }
+    } catch (error) {
+      console.warn('Failed to load account settings from API, falling back to .env:', error);
     }
   }
   
-  // Fallback to legacy configuration if no numbered accounts are found
+  // Fallback to environment variables if database is empty or failed
   if (accounts.length === 0) {
-    const legacyAccessToken = process.env.DHAN_ACCESS_TOKEN;
-    const legacyClientId = process.env.DHAN_CLIENT_ID;
+    console.log('Loading account configurations from .env file');
     
-    if (legacyAccessToken && legacyClientId) {
-      const legacyAccount: DhanAccountConfig = {
-        accountId: 1,
-        accessToken: legacyAccessToken,
-        clientId: legacyClientId,
-        availableFunds: parseFloat(process.env.AVAILABLE_FUNDS || '20000'),
-        leverage: parseFloat(process.env.LEVERAGE || '2'),
-        maxPositionSize: parseFloat(process.env.MAX_POSITION_SIZE || '0.1'),
-        minOrderValue: parseFloat(process.env.MIN_ORDER_VALUE || '1000'),
-        maxOrderValue: parseFloat(process.env.MAX_ORDER_VALUE || '5000'),
-        stopLossPercentage: parseFloat(process.env.STOP_LOSS_PERCENTAGE || '0.01'),
-        targetPricePercentage: parseFloat(process.env.TARGET_PRICE_PERCENTAGE || '0.015'),
-        riskOnCapital: parseFloat(process.env.RISK_ON_CAPITAL || '1.0'),
-        isActive: true,
-        enableTrailingStopLoss: process.env.ENABLE_TRAILING_STOP_LOSS === 'true',
-        minTrailJump: parseFloat(process.env.MIN_TRAIL_JUMP || '0.05'),
-        rebaseTpAndSl: process.env.REBASE_TP_AND_SL === 'true',
-        rebaseThresholdPercentage: parseFloat(process.env.REBASE_THRESHOLD_PERCENTAGE || '0.1'),
-        allowDuplicateTickers: process.env.ALLOW_DUPLICATE_TICKERS === 'true',
-        orderType: process.env.DHAN_ORDER_TYPE || 'MARKET'
-      };
+    // Check for numbered account configurations (1-5)
+    for (let i = 1; i <= 5; i++) {
+      const accessToken = process.env[`DHAN_ACCESS_TOKEN_${i}`];
+      const clientId = process.env[`DHAN_CLIENT_ID_${i}`];
       
-      accounts.push(legacyAccount);
+      // Only add account if both access token and client ID are provided
+      if (accessToken && clientId) {
+        const account: DhanAccountConfig = {
+          accountId: i,
+          accessToken,
+          clientId,
+          availableFunds: parseFloat(process.env[`AVAILABLE_FUNDS_${i}`] || '20000'),
+          leverage: parseFloat(process.env[`LEVERAGE_${i}`] || '2'),
+          maxPositionSize: parseFloat(process.env[`MAX_POSITION_SIZE_${i}`] || '0.1'),
+          minOrderValue: parseFloat(process.env[`MIN_ORDER_VALUE_${i}`] || '1000'),
+          maxOrderValue: parseFloat(process.env[`MAX_ORDER_VALUE_${i}`] || '5000'),
+          stopLossPercentage: parseFloat(process.env[`STOP_LOSS_PERCENTAGE_${i}`] || '0.01'),
+          targetPricePercentage: parseFloat(process.env[`TARGET_PRICE_PERCENTAGE_${i}`] || '0.015'),
+          riskOnCapital: parseFloat(process.env[`RISK_ON_CAPITAL_${i}`] || '1.0'),
+          isActive: true,
+          enableTrailingStopLoss: process.env[`ENABLE_TRAILING_STOP_LOSS_${i}`] === 'true',
+          minTrailJump: parseFloat(process.env[`MIN_TRAIL_JUMP_${i}`] || '0.05'),
+          rebaseTpAndSl: process.env[`REBASE_TP_AND_SL_${i}`] === 'true',
+          rebaseThresholdPercentage: parseFloat(process.env[`REBASE_THRESHOLD_PERCENTAGE_${i}`] || '0.1'),
+          allowDuplicateTickers: process.env[`ALLOW_DUPLICATE_TICKERS_${i}`] === 'true',
+          orderType: process.env[`DHAN_ORDER_TYPE_${i}`] || process.env.DHAN_ORDER_TYPE || 'MARKET'
+        };
+        
+        accounts.push(account);
+      }
+    }
+    
+    // Fallback to legacy configuration if no numbered accounts are found
+    if (accounts.length === 0) {
+      const legacyAccessToken = process.env.DHAN_ACCESS_TOKEN;
+      const legacyClientId = process.env.DHAN_CLIENT_ID;
+      
+      if (legacyAccessToken && legacyClientId) {
+        const legacyAccount: DhanAccountConfig = {
+          accountId: 1,
+          accessToken: legacyAccessToken,
+          clientId: legacyClientId,
+          availableFunds: parseFloat(process.env.AVAILABLE_FUNDS || '20000'),
+          leverage: parseFloat(process.env.LEVERAGE || '2'),
+          maxPositionSize: parseFloat(process.env.MAX_POSITION_SIZE || '0.1'),
+          minOrderValue: parseFloat(process.env.MIN_ORDER_VALUE || '1000'),
+          maxOrderValue: parseFloat(process.env.MAX_ORDER_VALUE || '5000'),
+          stopLossPercentage: parseFloat(process.env.STOP_LOSS_PERCENTAGE || '0.01'),
+          targetPricePercentage: parseFloat(process.env.TARGET_PRICE_PERCENTAGE || '0.015'),
+          riskOnCapital: parseFloat(process.env.RISK_ON_CAPITAL || '1.0'),
+          isActive: true,
+          enableTrailingStopLoss: process.env.ENABLE_TRAILING_STOP_LOSS === 'true',
+          minTrailJump: parseFloat(process.env.MIN_TRAIL_JUMP || '0.05'),
+          rebaseTpAndSl: process.env.REBASE_TP_AND_SL === 'true',
+          rebaseThresholdPercentage: parseFloat(process.env.REBASE_THRESHOLD_PERCENTAGE || '0.1'),
+          allowDuplicateTickers: process.env.ALLOW_DUPLICATE_TICKERS === 'true',
+          orderType: process.env.DHAN_ORDER_TYPE || 'MARKET'
+        };
+        
+        accounts.push(legacyAccount);
+      }
     }
   }
   
@@ -102,21 +130,21 @@ export function loadAccountConfigurations(): MultiAccountConfig {
 }
 
 // Get all active account configurations
-export function getActiveAccountConfigurations(): DhanAccountConfig[] {
-  const config = loadAccountConfigurations();
+export async function getActiveAccountConfigurations(): Promise<DhanAccountConfig[]> {
+  const config = await loadAccountConfigurations();
   return config.activeAccounts;
 }
 
 // Get account configuration by ID
-export function getAccountConfiguration(accountId: number): DhanAccountConfig | null {
-  const config = loadAccountConfigurations();
-  return config.accounts.find(account => account.accountId === accountId) || null;
+export async function getAccountConfiguration(accountId: number): Promise<DhanAccountConfig | null> {
+  const config = await loadAccountConfigurations();
+  return config.accounts.find((account: DhanAccountConfig) => account.accountId === accountId) || null;
 }
 
 // Get account configuration by client ID
-export function getAccountConfigurationByClientId(clientId: string): DhanAccountConfig | null {
-  const config = loadAccountConfigurations();
-  return config.accounts.find(account => account.clientId === clientId) || null;
+export async function getAccountConfigurationByClientId(clientId: string): Promise<DhanAccountConfig | null> {
+  const config = await loadAccountConfigurations();
+  return config.accounts.find((account: DhanAccountConfig) => account.clientId === clientId) || null;
 }
 
 // Validate account configuration
@@ -182,12 +210,12 @@ export function validateAccountConfiguration(account: DhanAccountConfig): {
 }
 
 // Validate all account configurations
-export function validateAllAccountConfigurations(): {
+export async function validateAllAccountConfigurations(): Promise<{
   isValid: boolean;
   errors: string[];
   accountErrors: Record<number, string[]>;
-} {
-  const config = loadAccountConfigurations();
+}> {
+  const config = await loadAccountConfigurations();
   const allErrors: string[] = [];
   const accountErrors: Record<number, string[]> = {};
   
@@ -216,7 +244,7 @@ export function validateAllAccountConfigurations(): {
 }
 
 // Get configuration summary
-export function getConfigurationSummary(): {
+export async function getConfigurationSummary(): Promise<{
   totalAccounts: number;
   activeAccounts: number;
   totalAvailableFunds: number;
@@ -229,10 +257,10 @@ export function getConfigurationSummary(): {
     leveragedFunds: number;
     isActive: boolean;
   }>;
-} {
-  const config = loadAccountConfigurations();
+}> {
+  const config = await loadAccountConfigurations();
   
-  const accounts = config.accounts.map(account => ({
+  const accounts = config.accounts.map((account: DhanAccountConfig) => ({
     accountId: account.accountId,
     clientId: account.clientId,
     availableFunds: account.availableFunds,
@@ -241,8 +269,8 @@ export function getConfigurationSummary(): {
     isActive: account.isActive
   }));
   
-  const totalAvailableFunds = accounts.reduce((sum, account) => sum + account.availableFunds, 0);
-  const totalLeveragedFunds = accounts.reduce((sum, account) => sum + account.leveragedFunds, 0);
+  const totalAvailableFunds = accounts.reduce((sum: number, account) => sum + account.availableFunds, 0);
+  const totalLeveragedFunds = accounts.reduce((sum: number, account) => sum + account.leveragedFunds, 0);
   
   return {
     totalAccounts: config.accounts.length,

@@ -18,6 +18,7 @@
     "db:migrate": "ts-node --project scripts/tsconfig.json scripts/migrate-database.ts",
     "db:verify": "ts-node --project scripts/tsconfig.json scripts/verify-migration.ts",
     "db:migrate:dhan": "ts-node --project scripts/tsconfig.json scripts/migrate-add-dhan-client-id.ts",
+    "db:migrate:settings": "ts-node --project scripts/tsconfig.json scripts/migrate-account-settings.ts",
     "db:test": "ts-node --project scripts/tsconfig.json scripts/test-database-integration.ts",
     "test:flow": "ts-node --project scripts/tsconfig.json scripts/test-complete-flow.ts",
     "test:api": "ts-node --project scripts/tsconfig.json scripts/test-api-flow.ts",

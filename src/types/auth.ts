@@ -64,6 +64,7 @@ export interface AuthContextType {
   register: (userData: RegisterRequest) => Promise<AuthResponse>;
   changePassword: (passwordData: ChangePasswordRequest) => Promise<AuthResponse>;
   logout: () => void;
+  getAuthToken: () => string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
 }
