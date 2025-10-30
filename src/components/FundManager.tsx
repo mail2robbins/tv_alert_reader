@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { calculatePositionSize, getFundUtilization, validateFundConfig, FundConfig } from '@/lib/fundManager';
+import { calculatePositionSize, validateFundConfig, FundConfig } from '@/lib/fundManager';
 
 interface FundManagerProps {
   onConfigUpdate?: () => void;
@@ -12,7 +12,14 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [testPrice, setTestPrice] = useState(100);
   const [positionCalculation, setPositionCalculation] = useState<ReturnType<typeof calculatePositionSize> | null>(null);
-  const [utilization, setUtilization] = useState<ReturnType<typeof getFundUtilization> | null>(null);
+  const [utilization, setUtilization] = useState<{
+    availableFunds: number;
+    leverage: number;
+    leveragedFunds: number;
+    maxPositionSize: number;
+    maxPositionValue: number;
+    utilizationPercentage: number;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Load fund configuration from API
@@ -39,7 +46,20 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
 
   useEffect(() => {
     if (config) {
-      setUtilization(getFundUtilization());
+      // Calculate utilization from the loaded config
+      const leveragedFunds = config.availableFunds * config.leverage;
+      const maxPositionValue = leveragedFunds * config.maxPositionSize;
+      const utilizationPercentage = (maxPositionValue / config.availableFunds) * 100;
+      
+      setUtilization({
+        availableFunds: config.availableFunds,
+        leverage: config.leverage,
+        leveragedFunds,
+        maxPositionSize: config.maxPositionSize,
+        maxPositionValue,
+        utilizationPercentage
+      });
+      
       setPositionCalculation(calculatePositionSize(testPrice, config));
     }
   }, [testPrice, config]);
@@ -315,7 +335,7 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
               />
             ) : (
               <div className="text-2xl font-semibold text-gray-900">
-                {config.riskOnCapital}x
+                {config.riskOnCapital || 1}x
               </div>
             )}
           </div>
@@ -361,16 +381,20 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
             <span className="text-sm text-gray-700 font-medium">₹</span>
           </div>
 
-          {positionCalculation && (
+          {positionCalculation && config && (
             <div className="bg-blue-50 rounded-lg p-4">
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4 text-sm">
                 <div>
                   <div className="text-gray-700 font-medium">Base Quantity</div>
-                  <div className="font-semibold text-lg text-gray-900">{Math.floor(positionCalculation.finalQuantity / config.riskOnCapital)}</div>
+                  <div className="font-semibold text-lg text-gray-900">
+                    {config.riskOnCapital && config.riskOnCapital > 0 
+                      ? Math.floor(positionCalculation.finalQuantity / config.riskOnCapital)
+                      : positionCalculation.finalQuantity}
+                  </div>
                 </div>
                 <div>
                   <div className="text-gray-700 font-medium">Risk Multiplier</div>
-                  <div className="font-semibold text-lg text-blue-600">{config.riskOnCapital}x</div>
+                  <div className="font-semibold text-lg text-blue-600">{config.riskOnCapital || 1}x</div>
                 </div>
                 <div>
                   <div className="text-gray-700 font-medium">Final Quantity</div>
@@ -402,14 +426,16 @@ export default function FundManager({ onConfigUpdate }: FundManagerProps) {
                 <div>
                   <div className="text-gray-700 font-medium">Risk Calculation</div>
                   <div className="font-semibold text-sm text-gray-600">
-                    {Math.floor(positionCalculation.finalQuantity / config.riskOnCapital)} × {config.riskOnCapital} = {positionCalculation.finalQuantity} shares
+                    {config.riskOnCapital && config.riskOnCapital > 0 
+                      ? `${Math.floor(positionCalculation.finalQuantity / config.riskOnCapital)} × ${config.riskOnCapital} = ${positionCalculation.finalQuantity} shares`
+                      : `${positionCalculation.finalQuantity} shares`}
                   </div>
                 </div>
               </div>
               
               {positionCalculation.canPlaceOrder ? (
                 <div className="mt-3 text-sm text-green-600 font-medium">
-                  ✅ Order can be placed with {positionCalculation.finalQuantity} shares (Risk: {config.riskOnCapital}x)
+                  ✅ Order can be placed with {positionCalculation.finalQuantity} shares (Risk: {config.riskOnCapital || 1}x)
                 </div>
               ) : (
                 <div className="mt-3 text-sm text-red-600 font-medium">

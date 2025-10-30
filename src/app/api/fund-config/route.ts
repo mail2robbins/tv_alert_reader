@@ -1,10 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFundConfig, updateFundConfig, validateFundConfig, FundConfig } from '@/lib/fundManager';
+import { validateFundConfig, FundConfig } from '@/lib/fundManager';
+import { getAllAccountSettings } from '@/lib/accountSettingsDatabase';
 
-// GET - Retrieve current fund configuration
+// GET - Retrieve current fund configuration from first active account
 export async function GET() {
   try {
-    const config = getFundConfig();
+    // Get account settings from database
+    const accounts = await getAllAccountSettings(true); // Get active accounts only
+    
+    if (accounts.length === 0) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'No active accounts configured' 
+        },
+        { status: 404 }
+      );
+    }
+    
+    // Use first active account for fund configuration
+    const firstAccount = accounts[0];
+    
+    const config: FundConfig = {
+      availableFunds: firstAccount.availableFunds,
+      leverage: firstAccount.leverage,
+      maxPositionSize: firstAccount.maxPositionSize,
+      minOrderValue: firstAccount.minOrderValue,
+      maxOrderValue: firstAccount.maxOrderValue,
+      stopLossPercentage: firstAccount.stopLossPercentage,
+      targetPricePercentage: firstAccount.targetPricePercentage,
+      riskOnCapital: firstAccount.riskOnCapital
+    };
     
     return NextResponse.json({
       success: true,
@@ -22,14 +48,43 @@ export async function GET() {
   }
 }
 
-// POST - Update fund configuration
+// POST - Update fund configuration (updates first active account)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const newConfig: Partial<FundConfig> = body;
     
+    // Get account settings from database
+    const accounts = await getAllAccountSettings(true);
+    
+    if (accounts.length === 0) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'No active accounts configured' 
+        },
+        { status: 404 }
+      );
+    }
+    
+    const firstAccount = accounts[0];
+    
+    // Merge current config with new config for validation
+    const currentConfig: FundConfig = {
+      availableFunds: firstAccount.availableFunds,
+      leverage: firstAccount.leverage,
+      maxPositionSize: firstAccount.maxPositionSize,
+      minOrderValue: firstAccount.minOrderValue,
+      maxOrderValue: firstAccount.maxOrderValue,
+      stopLossPercentage: firstAccount.stopLossPercentage,
+      targetPricePercentage: firstAccount.targetPricePercentage,
+      riskOnCapital: firstAccount.riskOnCapital
+    };
+    
+    const mergedConfig = { ...currentConfig, ...newConfig };
+    
     // Validate the configuration
-    const validation = validateFundConfig({ ...getFundConfig(), ...newConfig });
+    const validation = validateFundConfig(mergedConfig);
     if (!validation.isValid) {
       return NextResponse.json(
         { 
@@ -41,12 +96,13 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Update the configuration
-    const updatedConfig = updateFundConfig(newConfig);
+    // Update the first account in database
+    const { updateAccountSettings } = await import('@/lib/accountSettingsDatabase');
+    await updateAccountSettings(firstAccount.id, newConfig);
     
     return NextResponse.json({
       success: true,
-      data: updatedConfig
+      data: mergedConfig
     });
   } catch (error) {
     console.error('Error updating fund config:', error);
