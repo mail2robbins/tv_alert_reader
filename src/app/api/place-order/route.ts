@@ -50,7 +50,7 @@ async function handleManualOrder(body: {
     const { accountId, orderType, executionType, ticker, currentPrice } = body;
 
     // Get account configuration
-    const accountConfig = getAccountConfiguration(accountId);
+    const accountConfig = await getAccountConfiguration(accountId);
     if (!accountConfig) {
       return NextResponse.json(
         { success: false, error: `Account ${accountId} not found or not configured` } as ApiResponse<null>,
@@ -213,7 +213,7 @@ async function handleManualOrderAllAccounts(body: {
     const { orderType, executionType, ticker, currentPrice } = body;
 
     // Get all active account configurations
-    const config = loadAccountConfigurations();
+    const config = await loadAccountConfigurations();
     const userAccounts = config.activeAccounts;
 
     if (userAccounts.length === 0) {
@@ -414,7 +414,7 @@ export async function POST(request: NextRequest) {
         // Add successful orders to rebase queue for delayed processing
         for (const dhanResponse of dhanResponses) {
           if (dhanResponse.success && dhanResponse.orderId && dhanResponse.accountId && dhanResponse.clientId) {
-            const accountConfig = getAccountConfiguration(dhanResponse.accountId);
+            const accountConfig = await getAccountConfiguration(dhanResponse.accountId);
             if (accountConfig && accountConfig.rebaseTpAndSl) {
               console.log(`📝 Adding order ${dhanResponse.orderId} to rebase queue for account ${dhanResponse.clientId}`);
               

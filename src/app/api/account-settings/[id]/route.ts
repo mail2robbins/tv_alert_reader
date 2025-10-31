@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { 
-  getAccountSettingsById,
-  updateAccountSettings,
-  deleteAccountSettings,
-  clientIdExists,
+  getAccountSettingsById, 
+  updateAccountSettings, 
+  deleteAccountSettings, 
+  clientIdExists, 
   AccountSettings 
 } from '@/lib/accountSettingsDatabase';
 import { verifyToken, extractTokenFromHeader } from '@/lib/auth';
 import { findUserById } from '@/lib/userDatabase';
+import { invalidateAccountConfigCache } from '@/lib/accountConfigCache';
 
 /**
  * GET /api/account-settings/[id]
@@ -152,6 +153,9 @@ export async function PUT(
     // Update settings
     const updatedSettings = await updateAccountSettings(id, body);
     
+    // Invalidate cache for this specific account
+    invalidateAccountConfigCache(id);
+    
     // Mask access token in response
     const maskedSettings = {
       ...updatedSettings,
@@ -224,6 +228,9 @@ export async function DELETE(
     }
     
     const deleted = await deleteAccountSettings(id);
+    
+    // Invalidate cache for this specific account
+    invalidateAccountConfigCache(id);
     
     if (!deleted) {
       return NextResponse.json(

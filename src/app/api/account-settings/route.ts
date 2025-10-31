@@ -6,6 +6,7 @@ import {
 } from '@/lib/accountSettingsDatabase';
 import { verifyToken, extractTokenFromHeader } from '@/lib/auth';
 import { findUserById } from '@/lib/userDatabase';
+import { invalidateAccountConfigCache } from '@/lib/accountConfigCache';
 
 /**
  * GET /api/account-settings
@@ -141,6 +142,9 @@ export async function POST(request: NextRequest) {
     
     // Create account settings
     const newSettings = await createAccountSettings(settingsData);
+    
+    // Invalidate cache since we created new settings
+    invalidateAccountConfigCache();
     
     // Mask access token in response
     const maskedSettings = {

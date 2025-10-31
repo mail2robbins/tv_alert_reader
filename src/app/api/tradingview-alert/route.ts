@@ -194,7 +194,7 @@ export async function POST(request: NextRequest) {
               // Add successful orders to rebase queue for delayed processing
               for (const dhanResponse of dhanResponses) {
                 if (dhanResponse.success && dhanResponse.orderId && dhanResponse.accountId && dhanResponse.clientId) {
-                  const accountConfig = getAccountConfiguration(dhanResponse.accountId);
+                  const accountConfig = await getAccountConfiguration(dhanResponse.accountId);
                   if (accountConfig && accountConfig.rebaseTpAndSl) {
                     console.log(`📝 Adding order ${dhanResponse.orderId} to rebase queue for account ${dhanResponse.clientId}`);
                     

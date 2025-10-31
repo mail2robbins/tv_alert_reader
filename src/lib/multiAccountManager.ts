@@ -1,4 +1,9 @@
 // Multi-account configuration manager for Dhan.co accounts
+import { 
+  getCachedAccountConfigurations, 
+  getCachedAccountConfiguration, 
+  getCachedAccountConfigurationByClientId 
+} from './accountConfigCache';
 
 export interface DhanAccountConfig {
   accountId: number;
@@ -26,8 +31,8 @@ export interface MultiAccountConfig {
   activeAccounts: DhanAccountConfig[];
 }
 
-// Load account configuration from database with fallback to environment variables
-export async function loadAccountConfigurations(): Promise<MultiAccountConfig> {
+// Internal function to load configurations without cache
+async function _loadAccountConfigurationsInternal(): Promise<MultiAccountConfig> {
   let accounts: DhanAccountConfig[] = [];
   
   // Only load from database on server side
@@ -129,22 +134,31 @@ export async function loadAccountConfigurations(): Promise<MultiAccountConfig> {
   };
 }
 
+// Load account configuration with caching
+export async function loadAccountConfigurations(): Promise<MultiAccountConfig> {
+  return getCachedAccountConfigurations(_loadAccountConfigurationsInternal);
+}
+
 // Get all active account configurations
 export async function getActiveAccountConfigurations(): Promise<DhanAccountConfig[]> {
   const config = await loadAccountConfigurations();
   return config.activeAccounts;
 }
 
-// Get account configuration by ID
+// Get account configuration by ID with caching
 export async function getAccountConfiguration(accountId: number): Promise<DhanAccountConfig | null> {
-  const config = await loadAccountConfigurations();
-  return config.accounts.find((account: DhanAccountConfig) => account.accountId === accountId) || null;
+  return getCachedAccountConfiguration(accountId, async (id) => {
+    const config = await _loadAccountConfigurationsInternal();
+    return config.accounts.find((account: DhanAccountConfig) => account.accountId === id) || null;
+  });
 }
 
-// Get account configuration by client ID
+// Get account configuration by client ID with caching
 export async function getAccountConfigurationByClientId(clientId: string): Promise<DhanAccountConfig | null> {
-  const config = await loadAccountConfigurations();
-  return config.accounts.find((account: DhanAccountConfig) => account.clientId === clientId) || null;
+  return getCachedAccountConfigurationByClientId(clientId, async (cId) => {
+    const config = await _loadAccountConfigurationsInternal();
+    return config.accounts.find((account: DhanAccountConfig) => account.clientId === cId) || null;
+  });
 }
 
 // Validate account configuration
