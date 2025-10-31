@@ -77,7 +77,7 @@ export default function AccountSettingsForm({
     }
   };
 
-  const handleInputChange = (field: keyof AccountSettings, value: any) => {
+  const handleInputChange = (field: keyof AccountSettings, value: string | number | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 

@@ -289,7 +289,7 @@ export async function updateAccountSettings(id: number, settings: Partial<Omit<A
   
   try {
     const updates: string[] = [];
-    const values: any[] = [];
+    const values: (string | number | boolean)[] = [];
     let paramIndex = 1;
 
     if (settings.dhanClientId !== undefined) {

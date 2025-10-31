@@ -159,11 +159,11 @@ export async function POST(request: NextRequest) {
       data: maskedSettings,
       message: 'Account settings created successfully'
     }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating account settings:', error);
     
     // Handle duplicate client ID error
-    if (error.message && error.message.includes('duplicate key')) {
+    if (error instanceof Error && error.message && error.message.includes('duplicate key')) {
       return NextResponse.json(
         { 
           success: false, 

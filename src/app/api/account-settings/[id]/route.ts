@@ -3,8 +3,7 @@ import {
   getAccountSettingsById, 
   updateAccountSettings, 
   deleteAccountSettings, 
-  clientIdExists, 
-  AccountSettings 
+  clientIdExists
 } from '@/lib/accountSettingsDatabase';
 import { verifyToken, extractTokenFromHeader } from '@/lib/auth';
 import { findUserById } from '@/lib/userDatabase';

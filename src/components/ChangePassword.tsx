@@ -117,7 +117,7 @@ export default function ChangePassword({ onClose }: ChangePasswordProps) {
           general: result.error || 'Failed to change password'
         });
       }
-    } catch (error) {
+    } catch {
       setErrors({
         general: 'An unexpected error occurred'
       });
