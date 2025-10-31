@@ -45,9 +45,10 @@ const DEFAULT_FUND_CONFIG: FundConfig = {
 };
 
 // Get current fund configuration from main account (DHAN_CLIENT_ID_1)
-export function getFundConfig(): FundConfig {
+// Note: This function is deprecated - use API endpoint /api/fund-config instead
+export async function getFundConfig(): Promise<FundConfig> {
   // Try to get the main account configuration first
-  const mainAccount = getAccountConfiguration(1);
+  const mainAccount = await getAccountConfiguration(1);
   
   if (mainAccount) {
     // Convert DhanAccountConfig to FundConfig
@@ -68,9 +69,10 @@ export function getFundConfig(): FundConfig {
 }
 
 // Update fund configuration (updates the main account configuration)
-export function updateFundConfig(newConfig: Partial<FundConfig>): FundConfig {
+// Note: This function is deprecated - use API endpoint /api/fund-config instead
+export async function updateFundConfig(newConfig: Partial<FundConfig>): Promise<FundConfig> {
   // Get the current main account configuration
-  const mainAccount = getAccountConfiguration(1);
+  const mainAccount = await getAccountConfiguration(1);
   
   if (mainAccount) {
     // Update the main account configuration in memory
@@ -225,11 +227,11 @@ export function calculatePositionSizeForAccount(
 }
 
 // Calculate position sizes for all active accounts
-export function calculatePositionSizesForAllAccounts(
+export async function calculatePositionSizesForAllAccounts(
   stockPrice: number,
   signal?: 'BUY' | 'SELL' | 'HOLD'
-): Array<PositionCalculation & { accountConfig: DhanAccountConfig }> {
-  const activeAccounts: DhanAccountConfig[] = getActiveAccountConfigurations();
+): Promise<Array<PositionCalculation & { accountConfig: DhanAccountConfig }>> {
+  const activeAccounts: DhanAccountConfig[] = await getActiveAccountConfigurations();
   
   return activeAccounts.map((accountConfig: DhanAccountConfig) => ({
     ...calculatePositionSizeForAccount(stockPrice, accountConfig, signal),
@@ -260,15 +262,16 @@ export function calculatePositionScenarios(stockPrice: number): {
 }
 
 // Get fund utilization summary
-export function getFundUtilization(): {
+// Note: This function is deprecated - calculate directly from config instead
+export async function getFundUtilization(): Promise<{
   availableFunds: number;
   leverage: number;
   leveragedFunds: number;
   maxPositionSize: number;
   maxPositionValue: number;
   utilizationPercentage: number;
-} {
-  const config = getFundConfig();
+}> {
+  const config = await getFundConfig();
   const leveragedFunds = config.availableFunds * config.leverage;
   const maxPositionValue = leveragedFunds * config.maxPositionSize;
   const utilizationPercentage = (maxPositionValue / config.availableFunds) * 100;
@@ -329,18 +332,19 @@ export function validateFundConfig(config: FundConfig): {
 }
 
 // Calculate risk metrics
-export function calculateRiskMetrics(
+// Note: This function is deprecated - not used in current implementation
+export async function calculateRiskMetrics(
   stockPrice: number,
   quantity: number,
   stopLossPercentage: number = 0.05 // 5% stop loss
-): {
+): Promise<{
   positionValue: number;
   leveragedValue: number;
   maxLoss: number;
   maxLossPercentage: number;
   riskRewardRatio: number;
-} {
-  const config = getFundConfig();
+}> {
+  const config = await getFundConfig();
   const positionValue = stockPrice * quantity;
   const leveragedValue = positionValue / config.leverage;
   const maxLoss = positionValue * stopLossPercentage;

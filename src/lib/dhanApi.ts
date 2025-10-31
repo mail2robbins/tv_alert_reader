@@ -562,7 +562,7 @@ export async function placeDhanOrderOnAllAccounts(
     trailingJump?: number;
   }
 ): Promise<DhanOrderResponse[]> {
-  const activeAccounts = getActiveAccountConfigurations();
+  const activeAccounts = await getActiveAccountConfigurations();
   
   if (activeAccounts.length === 0) {
     throw new Error('No active Dhan accounts configured');

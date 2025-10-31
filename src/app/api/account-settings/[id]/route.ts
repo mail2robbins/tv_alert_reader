@@ -16,9 +16,12 @@ import { invalidateAccountConfigCache } from '@/lib/accountConfigCache';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Await params in Next.js 15
+    const { id: idParam } = await params;
+    
     // Verify authentication
     const authHeader = request.headers.get('authorization');
     const token = extractTokenFromHeader(authHeader);
@@ -47,7 +50,7 @@ export async function GET(
       );
     }
     
-    const id = parseInt(params.id);
+    const id = parseInt(idParam);
     if (isNaN(id)) {
       return NextResponse.json(
         { success: false, error: 'Invalid account settings ID' },
@@ -88,9 +91,12 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Await params in Next.js 15
+    const { id: idParam } = await params;
+    
     // Verify authentication
     const authHeader = request.headers.get('authorization');
     const token = extractTokenFromHeader(authHeader);
@@ -119,7 +125,7 @@ export async function PUT(
       );
     }
     
-    const id = parseInt(params.id);
+    const id = parseInt(idParam);
     if (isNaN(id)) {
       return NextResponse.json(
         { success: false, error: 'Invalid account settings ID' },
@@ -188,9 +194,12 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Await params in Next.js 15
+    const { id: idParam } = await params;
+    
     // Verify authentication
     const authHeader = request.headers.get('authorization');
     const token = extractTokenFromHeader(authHeader);
@@ -219,7 +228,7 @@ export async function DELETE(
       );
     }
     
-    const id = parseInt(params.id);
+    const id = parseInt(idParam);
     if (isNaN(id)) {
       return NextResponse.json(
         { success: false, error: 'Invalid account settings ID' },

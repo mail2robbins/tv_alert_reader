@@ -376,7 +376,7 @@ export async function POST(request: NextRequest) {
       // Multi-account order placement
       try {
         // Calculate position sizes for all accounts
-        const positionCalculations = calculatePositionSizesForAllAccounts(alert.price, alert.signal);
+        const positionCalculations = await calculatePositionSizesForAllAccounts(alert.price, alert.signal);
         
         // Filter out accounts that cannot place orders
         const validCalculations = positionCalculations.filter(calc => calc.canPlaceOrder);

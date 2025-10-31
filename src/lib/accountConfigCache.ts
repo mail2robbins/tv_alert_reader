@@ -9,7 +9,7 @@ interface CacheEntry<T> {
 }
 
 class AccountConfigCache {
-  private cache: Map<string, CacheEntry<any>> = new Map();
+  private cache: Map<string, CacheEntry<unknown>> = new Map();
   private defaultTTL: number = 5 * 60 * 1000; // 5 minutes default TTL
   
   /**

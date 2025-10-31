@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
             
             // Calculate position sizes for all accounts using multi-account fund management
             // Note: Duplicate ticker checking is now handled per-account based on allowDuplicateTickers setting
-            const positionCalculations = calculatePositionSizesForAllAccounts(alert.price, alert.signal);
+            const positionCalculations = await calculatePositionSizesForAllAccounts(alert.price, alert.signal);
             const validCalculations = positionCalculations.filter(calc => calc.canPlaceOrder);
           
             if (validCalculations.length === 0) {
