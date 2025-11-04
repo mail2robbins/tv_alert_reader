@@ -18,6 +18,7 @@ export default function AccountSettingsForm({
   onError
 }: AccountSettingsFormProps) {
   const { getAuthToken } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<Partial<AccountSettings>>({
     dhanClientId: '',
     dhanAccessToken: '',
@@ -46,6 +47,7 @@ export default function AccountSettingsForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     try {
       const token = getAuthToken();
@@ -70,10 +72,12 @@ export default function AccountSettingsForm({
         onSuccess(data.message || 'Account settings saved successfully');
       } else {
         onError(data.error || 'Failed to save account settings');
+        setIsSubmitting(false);
       }
     } catch (err) {
       onError('Failed to save account settings');
       console.error(err);
+      setIsSubmitting(false);
     }
   };
 
@@ -99,9 +103,10 @@ export default function AccountSettingsForm({
               <input
                 type="text"
                 required
+                disabled={isSubmitting}
                 value={formData.dhanClientId || ''}
                 onChange={(e) => handleInputChange('dhanClientId', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -112,9 +117,10 @@ export default function AccountSettingsForm({
               <input
                 type="text"
                 required
+                disabled={isSubmitting}
                 value={formData.dhanAccessToken || ''}
                 onChange={(e) => handleInputChange('dhanAccessToken', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -125,9 +131,10 @@ export default function AccountSettingsForm({
               <input
                 type="number"
                 step="0.01"
+                disabled={isSubmitting}
                 value={formData.availableFunds || 0}
                 onChange={(e) => handleInputChange('availableFunds', parseFloat(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -138,9 +145,10 @@ export default function AccountSettingsForm({
               <input
                 type="number"
                 step="0.1"
+                disabled={isSubmitting}
                 value={formData.leverage || 0}
                 onChange={(e) => handleInputChange('leverage', parseFloat(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -153,9 +161,10 @@ export default function AccountSettingsForm({
                 step="0.01"
                 min="0"
                 max="1"
+                disabled={isSubmitting}
                 value={formData.maxPositionSize || 0}
                 onChange={(e) => handleInputChange('maxPositionSize', parseFloat(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -166,9 +175,10 @@ export default function AccountSettingsForm({
               <input
                 type="number"
                 step="0.01"
+                disabled={isSubmitting}
                 value={formData.minOrderValue || 0}
                 onChange={(e) => handleInputChange('minOrderValue', parseFloat(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -179,9 +189,10 @@ export default function AccountSettingsForm({
               <input
                 type="number"
                 step="0.01"
+                disabled={isSubmitting}
                 value={formData.maxOrderValue || 0}
                 onChange={(e) => handleInputChange('maxOrderValue', parseFloat(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -194,9 +205,10 @@ export default function AccountSettingsForm({
                 step="0.0001"
                 min="0"
                 max="1"
+                disabled={isSubmitting}
                 value={formData.stopLossPercentage || 0}
                 onChange={(e) => handleInputChange('stopLossPercentage', parseFloat(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -209,9 +221,10 @@ export default function AccountSettingsForm({
                 step="0.0001"
                 min="0"
                 max="1"
+                disabled={isSubmitting}
                 value={formData.targetPricePercentage || 0}
                 onChange={(e) => handleInputChange('targetPricePercentage', parseFloat(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -222,9 +235,10 @@ export default function AccountSettingsForm({
               <input
                 type="number"
                 step="0.1"
+                disabled={isSubmitting}
                 value={formData.riskOnCapital || 0}
                 onChange={(e) => handleInputChange('riskOnCapital', parseFloat(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -235,9 +249,10 @@ export default function AccountSettingsForm({
               <input
                 type="number"
                 step="0.05"
+                disabled={isSubmitting}
                 value={formData.minTrailJump || 0}
                 onChange={(e) => handleInputChange('minTrailJump', parseFloat(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -250,9 +265,10 @@ export default function AccountSettingsForm({
                 step="0.0001"
                 min="0"
                 max="1"
+                disabled={isSubmitting}
                 value={formData.rebaseThresholdPercentage || 0}
                 onChange={(e) => handleInputChange('rebaseThresholdPercentage', parseFloat(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -261,9 +277,10 @@ export default function AccountSettingsForm({
                 Order Type
               </label>
               <select
+                disabled={isSubmitting}
                 value={formData.orderType || 'LIMIT'}
                 onChange={(e) => handleInputChange('orderType', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <option value="MARKET">MARKET</option>
                 <option value="LIMIT">LIMIT</option>
@@ -274,9 +291,10 @@ export default function AccountSettingsForm({
               <input
                 type="checkbox"
                 id="enableTrailingStopLoss"
+                disabled={isSubmitting}
                 checked={formData.enableTrailingStopLoss || false}
                 onChange={(e) => handleInputChange('enableTrailingStopLoss', e.target.checked)}
-                className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-600 border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <label htmlFor="enableTrailingStopLoss" className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                 Enable Trailing Stop Loss
@@ -287,9 +305,10 @@ export default function AccountSettingsForm({
               <input
                 type="checkbox"
                 id="rebaseTpAndSl"
+                disabled={isSubmitting}
                 checked={formData.rebaseTpAndSl || false}
                 onChange={(e) => handleInputChange('rebaseTpAndSl', e.target.checked)}
-                className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-600 border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <label htmlFor="rebaseTpAndSl" className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                 Rebase TP and SL
@@ -300,9 +319,10 @@ export default function AccountSettingsForm({
               <input
                 type="checkbox"
                 id="allowDuplicateTickers"
+                disabled={isSubmitting}
                 checked={formData.allowDuplicateTickers || false}
                 onChange={(e) => handleInputChange('allowDuplicateTickers', e.target.checked)}
-                className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-600 border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <label htmlFor="allowDuplicateTickers" className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                 Allow Duplicate Tickers
@@ -313,9 +333,10 @@ export default function AccountSettingsForm({
               <input
                 type="checkbox"
                 id="isActive"
+                disabled={isSubmitting}
                 checked={formData.isActive || false}
                 onChange={(e) => handleInputChange('isActive', e.target.checked)}
-                className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-600 border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <label htmlFor="isActive" className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                 Active
@@ -327,15 +348,23 @@ export default function AccountSettingsForm({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {account ? 'Update' : 'Create'}
+              {isSubmitting && (
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              )}
+              {isSubmitting ? 'Saving...' : (account ? 'Update' : 'Create')}
             </button>
           </div>
         </form>
