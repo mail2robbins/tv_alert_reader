@@ -34,9 +34,9 @@ class RebaseQueueManager {
   private queue: RebaseQueueItem[] = [];
   private processing = false;
   private results: RebaseResult[] = [];
-  private readonly DELAY_BETWEEN_ATTEMPTS = 1000; // 1 second
-  private readonly MAX_ATTEMPTS = 5;
-  private readonly INITIAL_DELAY = 1000; // 1 second initial delay
+  private readonly DELAY_BETWEEN_ATTEMPTS = 2000; // 2 seconds between retries
+  private readonly MAX_ATTEMPTS = 8;
+  private readonly INITIAL_DELAY = 5000; // 5 seconds initial delay to allow order execution
 
   /**
    * Add an order to the rebase queue

@@ -651,28 +651,31 @@ export interface DhanOrderDetails {
   updateTime?: string;
 }
 
-// Get order details by order ID
+// Get order details by order ID with retry logic
 export async function getDhanOrderDetails(orderId: string, accessToken: string): Promise<DhanOrderDetails> {
-  try {
-    console.log(`🔍 Fetching order details for orderId: ${orderId}`);
-    
-    // Create AbortController for timeout handling
-    const controller = new AbortController();
-    const timeoutMs = parseInt(process.env.DHAN_API_TIMEOUT_MS || '10000');
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    
-    const response = await fetch(`https://api.dhan.co/v2/orders/${orderId}`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'access-token': accessToken
-      },
-      signal: controller.signal,
-      // Add connection keep-alive and retry settings
-      keepalive: true
-    });
-    
-    clearTimeout(timeoutId);
+  const maxRetries = 3;
+  const baseDelay = 1000; // 1 second
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔍 Fetching order details for orderId: ${orderId} (attempt ${attempt}/${maxRetries})`);
+      
+      // Create AbortController for timeout handling
+      const controller = new AbortController();
+      const timeoutMs = parseInt(process.env.DHAN_API_TIMEOUT_MS || '30000');
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      
+      const response = await fetch(`https://api.dhan.co/v2/orders/${orderId}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'access-token': accessToken,
+          'Connection': 'keep-alive'
+        },
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
 
     console.log(`📡 Response status: ${response.status} ${response.statusText}`);
 
@@ -721,22 +724,43 @@ export async function getDhanOrderDetails(orderId: string, accessToken: string):
       console.error(`❌ API Error Response:`, errorText);
       throw new Error(`Failed to fetch order details: ${response.status} ${response.statusText} - ${errorText}`);
     }
-  } catch (error) {
-    console.error('❌ Error fetching order details:', error);
-    
-    // Handle specific network errors
-    if (error instanceof Error) {
-      if (error.name === 'AbortError') {
-        throw new Error('Request timeout: Order details fetch took too long');
-      } else if (error.message.includes('fetch failed') || error.message.includes('UND_ERR_SOCKET')) {
-        throw new Error('Network connection failed: Unable to connect to Dhan API');
-      } else if (error.message.includes('other side closed')) {
-        throw new Error('Connection closed by server: Dhan API connection was terminated');
+    } catch (error) {
+      console.error(`❌ Error fetching order details (attempt ${attempt}/${maxRetries}):`, error);
+      
+      // Check if we should retry
+      const isRetryableError = error instanceof Error && (
+        error.name === 'AbortError' ||
+        error.message.includes('fetch failed') ||
+        error.message.includes('ETIMEDOUT') ||
+        error.message.includes('ECONNRESET') ||
+        error.message.includes('UND_ERR_SOCKET') ||
+        error.message.includes('other side closed')
+      );
+      
+      if (isRetryableError && attempt < maxRetries) {
+        const delay = baseDelay * Math.pow(2, attempt - 1); // Exponential backoff
+        console.log(`⏳ Retrying in ${delay}ms due to network error...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue; // Retry
       }
+      
+      // Handle specific network errors for final attempt
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          throw new Error('Request timeout: Order details fetch took too long');
+        } else if (error.message.includes('fetch failed') || error.message.includes('UND_ERR_SOCKET') || error.message.includes('ETIMEDOUT')) {
+          throw new Error('Network connection failed: Unable to connect to Dhan API');
+        } else if (error.message.includes('other side closed')) {
+          throw new Error('Connection closed by server: Dhan API connection was terminated');
+        }
+      }
+      
+      throw error;
     }
-    
-    throw error;
   }
+  
+  // This should never be reached, but TypeScript needs it
+  throw new Error('Failed to fetch order details after all retries');
 }
 
 // Update target price for an order
