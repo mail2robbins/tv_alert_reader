@@ -78,6 +78,10 @@ export default function AccountSettingsList({
                   <p className="font-medium text-gray-900 dark:text-white">{account.orderType}</p>
                 </div>
                 <div>
+                  <p className="text-gray-500 dark:text-gray-400">LIMIT Buffer</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{account.limitBufferPercentage.toFixed(2)}%</p>
+                </div>
+                <div>
                   <p className="text-gray-500 dark:text-gray-400">Stop Loss</p>
                   <p className="font-medium text-gray-900 dark:text-white">{(account.stopLossPercentage * 100).toFixed(2)}%</p>
                 </div>

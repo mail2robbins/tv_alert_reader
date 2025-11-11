@@ -21,6 +21,7 @@ interface DhanAccountConfig {
   rebaseThresholdPercentage: number;
   allowDuplicateTickers: boolean;
   orderType: string;
+  limitBufferPercentage: number;
 }
 
 interface MultiAccountConfig {
@@ -443,6 +444,10 @@ export default function AccountConfigCard({ className = '' }: AccountConfigCardP
                       {account.orderType || 'MARKET'}
                     </span>
                   </div>
+                </div>
+                <div className="bg-white p-3 rounded border">
+                  <div className="text-gray-500 text-xs">LIMIT Buffer</div>
+                  <div className="font-bold text-lg text-gray-900">{(account.limitBufferPercentage || 0).toFixed(2)}%</div>
                 </div>
               </div>
             </div>
