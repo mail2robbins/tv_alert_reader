@@ -36,7 +36,8 @@ export async function GET(request: NextRequest) {
       rebaseTpAndSl: setting.rebaseTpAndSl,
       rebaseThresholdPercentage: setting.rebaseThresholdPercentage,
       allowDuplicateTickers: setting.allowDuplicateTickers,
-      orderType: setting.orderType
+      orderType: setting.orderType,
+      limitBufferPercentage: setting.limitBufferPercentage
     }));
     
     const activeAccounts = accounts.filter(account => account.isActive);

@@ -137,6 +137,7 @@ export async function POST(request: NextRequest) {
       rebaseThresholdPercentage: body.rebaseThresholdPercentage ?? 0.02,
       allowDuplicateTickers: body.allowDuplicateTickers ?? false,
       orderType: body.orderType ?? 'LIMIT',
+      limitBufferPercentage: body.limitBufferPercentage ?? 0.0,
       isActive: body.isActive ?? true
     };
     

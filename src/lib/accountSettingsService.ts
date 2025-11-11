@@ -18,6 +18,7 @@ export interface AccountSettingsDTO {
   rebaseThresholdPercentage: number;
   allowDuplicateTickers: boolean;
   orderType: string;
+  limitBufferPercentage: number;
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;

@@ -318,7 +318,36 @@ export async function placeDhanOrderForAccount(
   
   // Determine order type and price - use account-specific order type for alert-based orders
   const orderType = orderConfig?.orderType || accountConfig.orderType || DHAN_ORDER_TYPES_ORDER.MARKET;
-  const orderPrice = orderType === DHAN_ORDER_TYPES_ORDER.MARKET ? 0 : alert.price;
+  
+  // Calculate order price with buffer for LIMIT orders
+  let orderPrice = 0;
+  if (orderType === DHAN_ORDER_TYPES_ORDER.LIMIT) {
+    const transactionType = mapSignalToTransactionType(alert.signal);
+    const bufferPercentage = accountConfig.limitBufferPercentage || 0;
+    
+    if (bufferPercentage > 0) {
+      // Apply buffer based on transaction type
+      if (transactionType === 'BUY') {
+        // For BUY orders, add buffer to increase the limit price (to improve execution chances)
+        orderPrice = alert.price * (1 + bufferPercentage / 100);
+      } else {
+        // For SELL orders, subtract buffer to decrease the limit price (to improve execution chances)
+        orderPrice = alert.price * (1 - bufferPercentage / 100);
+      }
+      
+      // Round to 2 decimal places
+      orderPrice = Math.round(orderPrice * 100) / 100;
+      
+      console.log(`Applied LIMIT buffer for ${transactionType} order:`, {
+        originalPrice: alert.price,
+        bufferPercentage: bufferPercentage,
+        calculatedPrice: orderPrice,
+        difference: (orderPrice - alert.price).toFixed(2)
+      });
+    } else {
+      orderPrice = alert.price;
+    }
+  }
   
   // Prepare order request
   const orderRequest: DhanOrderRequest = {

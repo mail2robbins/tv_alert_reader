@@ -531,7 +531,8 @@ export async function POST(request: NextRequest) {
           rebaseTpAndSl: process.env.REBASE_TP_AND_SL === 'true',
           rebaseThresholdPercentage: parseFloat(process.env.REBASE_THRESHOLD_PERCENTAGE || '0.1'),
           allowDuplicateTickers: process.env.ALLOW_DUPLICATE_TICKERS === 'true',
-          orderType: process.env.DHAN_ORDER_TYPE || 'MARKET'
+          orderType: process.env.DHAN_ORDER_TYPE || 'MARKET',
+          limitBufferPercentage: parseFloat(process.env.LIMIT_BUFFER_PERCENTAGE || '0.0')
         };
 
         if (legacyAccountConfig.rebaseTpAndSl) {

@@ -18,6 +18,7 @@ export interface AccountSettings {
   rebaseThresholdPercentage: number;
   allowDuplicateTickers: boolean;
   orderType: string;
+  limitBufferPercentage: number;
   isActive: boolean;
   createdAt?: Date;
   updatedAt?: Date;
@@ -49,6 +50,7 @@ export async function initializeAccountSettingsTable(): Promise<void> {
         rebase_threshold_percentage DECIMAL(6,4) NOT NULL DEFAULT 0.02,
         allow_duplicate_tickers BOOLEAN NOT NULL DEFAULT false,
         order_type VARCHAR(20) NOT NULL DEFAULT 'LIMIT',
+        limit_buffer_percentage DECIMAL(6,4) NOT NULL DEFAULT 0.0,
         is_active BOOLEAN NOT NULL DEFAULT true,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -107,6 +109,7 @@ export async function getAllAccountSettings(activeOnly: boolean = false): Promis
       rebaseThresholdPercentage: parseFloat(row.rebase_threshold_percentage),
       allowDuplicateTickers: row.allow_duplicate_tickers,
       orderType: row.order_type,
+      limitBufferPercentage: parseFloat(row.limit_buffer_percentage || '0'),
       isActive: row.is_active,
       createdAt: row.created_at,
       updatedAt: row.updated_at
@@ -154,6 +157,7 @@ export async function getAccountSettingsByClientId(clientId: string): Promise<Ac
       rebaseThresholdPercentage: parseFloat(row.rebase_threshold_percentage),
       allowDuplicateTickers: row.allow_duplicate_tickers,
       orderType: row.order_type,
+      limitBufferPercentage: parseFloat(row.limit_buffer_percentage || '0'),
       isActive: row.is_active,
       createdAt: row.created_at,
       updatedAt: row.updated_at
@@ -201,6 +205,7 @@ export async function getAccountSettingsById(id: number): Promise<AccountSetting
       rebaseThresholdPercentage: parseFloat(row.rebase_threshold_percentage),
       allowDuplicateTickers: row.allow_duplicate_tickers,
       orderType: row.order_type,
+      limitBufferPercentage: parseFloat(row.limit_buffer_percentage || '0'),
       isActive: row.is_active,
       createdAt: row.created_at,
       updatedAt: row.updated_at
@@ -226,8 +231,8 @@ export async function createAccountSettings(settings: Omit<AccountSettings, 'id'
         max_position_size, min_order_value, max_order_value,
         stop_loss_percentage, target_price_percentage, risk_on_capital,
         enable_trailing_stop_loss, min_trail_jump, rebase_tp_and_sl,
-        rebase_threshold_percentage, allow_duplicate_tickers, order_type, is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+        rebase_threshold_percentage, allow_duplicate_tickers, order_type, limit_buffer_percentage, is_active
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
       RETURNING *`,
       [
         settings.dhanClientId,
@@ -246,6 +251,7 @@ export async function createAccountSettings(settings: Omit<AccountSettings, 'id'
         settings.rebaseThresholdPercentage,
         settings.allowDuplicateTickers,
         settings.orderType,
+        settings.limitBufferPercentage,
         settings.isActive
       ]
     );
@@ -269,6 +275,7 @@ export async function createAccountSettings(settings: Omit<AccountSettings, 'id'
       rebaseThresholdPercentage: parseFloat(row.rebase_threshold_percentage),
       allowDuplicateTickers: row.allow_duplicate_tickers,
       orderType: row.order_type,
+      limitBufferPercentage: parseFloat(row.limit_buffer_percentage || '0'),
       isActive: row.is_active,
       createdAt: row.created_at,
       updatedAt: row.updated_at
@@ -356,6 +363,10 @@ export async function updateAccountSettings(id: number, settings: Partial<Omit<A
       updates.push(`order_type = $${paramIndex++}`);
       values.push(settings.orderType);
     }
+    if (settings.limitBufferPercentage !== undefined) {
+      updates.push(`limit_buffer_percentage = $${paramIndex++}`);
+      values.push(settings.limitBufferPercentage);
+    }
     if (settings.isActive !== undefined) {
       updates.push(`is_active = $${paramIndex++}`);
       values.push(settings.isActive);
@@ -392,6 +403,7 @@ export async function updateAccountSettings(id: number, settings: Partial<Omit<A
       rebaseThresholdPercentage: parseFloat(row.rebase_threshold_percentage),
       allowDuplicateTickers: row.allow_duplicate_tickers,
       orderType: row.order_type,
+      limitBufferPercentage: parseFloat(row.limit_buffer_percentage || '0'),
       isActive: row.is_active,
       createdAt: row.created_at,
       updatedAt: row.updated_at
