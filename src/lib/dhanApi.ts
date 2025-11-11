@@ -335,13 +335,22 @@ export async function placeDhanOrderForAccount(
         orderPrice = alert.price * (1 - bufferPercentage / 100);
       }
       
-      // Round to 2 decimal places
+      // Round to nearest valid tick size based on NSE price ranges
+      // NSE tick size rules:
+      // 0.00 - 999.95: tick size = 0.05
+      // 1000.00 - 9999.95: tick size = 0.05
+      // 10000.00+: tick size = 0.05
+      const tickSize = 0.05;
+      orderPrice = Math.round(orderPrice / tickSize) * tickSize;
+      
+      // Round to 2 decimal places to avoid floating point precision issues
       orderPrice = Math.round(orderPrice * 100) / 100;
       
       console.log(`Applied LIMIT buffer for ${transactionType} order:`, {
         originalPrice: alert.price,
         bufferPercentage: bufferPercentage,
         calculatedPrice: orderPrice,
+        tickSize: tickSize,
         difference: (orderPrice - alert.price).toFixed(2)
       });
     } else {
