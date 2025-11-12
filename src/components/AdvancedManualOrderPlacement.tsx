@@ -177,7 +177,7 @@ export default function AdvancedManualOrderPlacement({ onOrderPlaced }: Advanced
       
       setFormData(prev => ({
         ...prev,
-        stopLossPercentage: parseFloat(percentage.toFixed(4))
+        stopLossPercentage: parseFloat(percentage.toFixed(2))
       }));
     }
   };
@@ -191,7 +191,7 @@ export default function AdvancedManualOrderPlacement({ onOrderPlaced }: Advanced
       
       setFormData(prev => ({
         ...prev,
-        targetPricePercentage: parseFloat(percentage.toFixed(4))
+        targetPricePercentage: parseFloat(percentage.toFixed(2))
       }));
     }
   };
@@ -211,11 +211,28 @@ export default function AdvancedManualOrderPlacement({ onOrderPlaced }: Advanced
       const result = await response.json();
 
       if (result.success && result.data.price) {
+        const price = result.data.price;
+        
+        // Calculate Stop Loss and Target amounts based on current percentages
+        const slAmount = formData.orderType === 'BUY'
+          ? price * (1 - formData.stopLossPercentage / 100)
+          : price * (1 + formData.stopLossPercentage / 100);
+        
+        const targetAmount = formData.orderType === 'BUY'
+          ? price * (1 + formData.targetPricePercentage / 100)
+          : price * (1 - formData.targetPricePercentage / 100);
+        
+        // Round to nearest tick size (0.05)
+        const roundedSL = roundToTickSize(slAmount);
+        const roundedTarget = roundToTickSize(targetAmount);
+        
         setFormData(prev => ({
           ...prev,
-          currentPrice: result.data.price
+          currentPrice: price,
+          stopLossAmount: parseFloat(roundedSL.toFixed(2)),
+          targetPriceAmount: parseFloat(roundedTarget.toFixed(2))
         }));
-        setSuccess(`Price fetched successfully: ₹${result.data.price.toFixed(2)}`);
+        setSuccess(`Price fetched successfully: ₹${price.toFixed(2)}`);
       } else {
         setError(result.error || 'Failed to fetch stock price');
       }
@@ -695,13 +712,13 @@ export default function AdvancedManualOrderPlacement({ onOrderPlaced }: Advanced
                   value={formData.stopLossPercentage}
                   onChange={(e) => {
                     const value = e.target.value;
-                    // Allow typing but limit to 4 decimal places
-                    if (value === '' || /^\d*\.?\d{0,4}$/.test(value)) {
+                    // Allow typing but limit to 2 decimal places
+                    if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
                       handleInputChange('stopLossPercentage', value === '' ? 0 : parseFloat(value));
                     }
                   }}
                   onBlur={calculateStopLossAmount}
-                  step="0.0001"
+                  step="0.01"
                   min="0"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white text-sm"
                 />
@@ -743,13 +760,13 @@ export default function AdvancedManualOrderPlacement({ onOrderPlaced }: Advanced
                   value={formData.targetPricePercentage}
                   onChange={(e) => {
                     const value = e.target.value;
-                    // Allow typing but limit to 4 decimal places
-                    if (value === '' || /^\d*\.?\d{0,4}$/.test(value)) {
+                    // Allow typing but limit to 2 decimal places
+                    if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
                       handleInputChange('targetPricePercentage', value === '' ? 0 : parseFloat(value));
                     }
                   }}
                   onBlur={calculateTargetAmount}
-                  step="0.0001"
+                  step="0.01"
                   min="0"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white text-sm"
                 />
