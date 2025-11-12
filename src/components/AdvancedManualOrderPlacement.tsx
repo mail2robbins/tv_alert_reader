@@ -126,6 +126,13 @@ export default function AdvancedManualOrderPlacement({ onOrderPlaced }: Advanced
         newData.orderType = 'BUY';
       }
 
+      // If Product Type is changed to CNC, set leverage to 1 and riskOnCapital to 100%
+      // CNC orders don't use leverage (delivery trading)
+      if (field === 'productType' && value === 'CNC') {
+        newData.leverage = 1;
+        newData.riskOnCapital = 100.0; // 100% for CNC (will be converted to 1.0 when sending)
+      }
+
       return newData;
     });
     if (error) setError(null);
@@ -309,7 +316,7 @@ export default function AdvancedManualOrderPlacement({ onOrderPlaced }: Advanced
             leverage: formData.productType === 'INTRADAY' ? formData.leverage : 1,
             stopLossPercentage: formData.stopLossPercentage / 100,
             targetPricePercentage: formData.targetPricePercentage / 100,
-            riskOnCapital: formData.productType === 'INTRADAY' ? formData.riskOnCapital / 100 : 0,
+            riskOnCapital: formData.productType === 'INTRADAY' ? formData.riskOnCapital / 100 : 1.0,
             enableTrailingStopLoss: formData.productType === 'INTRADAY' ? formData.trailingStopEnabled : false
           }
         }),
@@ -385,7 +392,7 @@ export default function AdvancedManualOrderPlacement({ onOrderPlaced }: Advanced
             leverage: formData.productType === 'INTRADAY' ? formData.leverage : 1,
             stopLossPercentage: formData.stopLossPercentage / 100,
             targetPricePercentage: formData.targetPricePercentage / 100,
-            riskOnCapital: formData.productType === 'INTRADAY' ? formData.riskOnCapital / 100 : 0,
+            riskOnCapital: formData.productType === 'INTRADAY' ? formData.riskOnCapital / 100 : 1.0,
             enableTrailingStopLoss: formData.productType === 'INTRADAY' ? formData.trailingStopEnabled : false
           }
         }),
@@ -698,6 +705,22 @@ export default function AdvancedManualOrderPlacement({ onOrderPlaced }: Advanced
                     max="10"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white text-sm"
                   />
+                </div>
+              )}
+
+              {/* CNC Info - show leverage is fixed at 1x */}
+              {formData.productType === 'CNC' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                  <div className="flex items-start gap-2">
+                    <svg className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="text-xs text-blue-800">
+                      <p className="font-semibold mb-1">CNC Order Settings</p>
+                      <p>• Leverage: <span className="font-semibold">1x</span> (No leverage - full margin required)</p>
+                      <p>• Risk on Capital: <span className="font-semibold">100%</span> (Uses full available funds)</p>
+                    </div>
+                  </div>
                 </div>
               )}
 
