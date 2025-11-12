@@ -158,6 +158,7 @@ export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlace
           accountId: parseInt(formData.accountId),
           orderType: formData.orderType,
           executionType: formData.executionType,
+          productType: 'INTRADAY',
           ticker: formData.ticker.trim().toUpperCase(),
           currentPrice: formData.currentPrice
         }),
@@ -219,6 +220,7 @@ export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlace
           placeInAllAccounts: true,
           orderType: formData.orderType,
           executionType: formData.executionType,
+          productType: 'INTRADAY',
           ticker: formData.ticker.trim().toUpperCase(),
           currentPrice: formData.currentPrice
         }),
@@ -559,7 +561,7 @@ export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlace
 
           {/* Submit Buttons */}
           <div className="flex flex-col sm:flex-row justify-end gap-3">
-            <button
+            {/* <button
               type="submit"
               disabled={isSubmitting || !formData.accountId || !formData.ticker || formData.currentPrice <= 0}
               className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
@@ -580,7 +582,7 @@ export default function ManualOrderPlacement({ onOrderPlaced }: ManualOrderPlace
                   Place Order
                 </>
               )}
-            </button>
+            </button> */}
             <button
               type="button"
               onClick={handleSubmitAllAccounts}

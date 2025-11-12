@@ -132,24 +132,69 @@ export default function AdvancedManualOrderPlacement({ onOrderPlaced }: Advanced
     if (success) setSuccess(null);
   };
 
-  // Calculate SL and Target amounts when price or percentages change
-  useEffect(() => {
+  // Helper function to round to nearest tick size (0.05)
+  const roundToTickSize = (price: number): number => {
+    const tickSize = 0.05;
+    return Math.round(price / tickSize) * tickSize;
+  };
+
+  // Calculate SL amount from percentage
+  const calculateStopLossAmount = () => {
     if (formData.currentPrice > 0) {
       const slAmount = formData.orderType === 'BUY'
         ? formData.currentPrice * (1 - formData.stopLossPercentage / 100)
         : formData.currentPrice * (1 + formData.stopLossPercentage / 100);
       
+      const roundedAmount = roundToTickSize(slAmount);
+      setFormData(prev => ({
+        ...prev,
+        stopLossAmount: parseFloat(roundedAmount.toFixed(2))
+      }));
+    }
+  };
+
+  // Calculate Target amount from percentage
+  const calculateTargetAmount = () => {
+    if (formData.currentPrice > 0) {
       const targetAmount = formData.orderType === 'BUY'
         ? formData.currentPrice * (1 + formData.targetPricePercentage / 100)
         : formData.currentPrice * (1 - formData.targetPricePercentage / 100);
       
+      const roundedAmount = roundToTickSize(targetAmount);
       setFormData(prev => ({
         ...prev,
-        stopLossAmount: parseFloat(slAmount.toFixed(2)),
-        targetPriceAmount: parseFloat(targetAmount.toFixed(2))
+        targetPriceAmount: parseFloat(roundedAmount.toFixed(2))
       }));
     }
-  }, [formData.currentPrice, formData.stopLossPercentage, formData.targetPricePercentage, formData.orderType]);
+  };
+
+  // Calculate SL percentage from amount
+  const calculateStopLossPercentage = () => {
+    if (formData.currentPrice > 0 && formData.stopLossAmount > 0) {
+      const percentage = formData.orderType === 'BUY'
+        ? ((formData.currentPrice - formData.stopLossAmount) / formData.currentPrice) * 100
+        : ((formData.stopLossAmount - formData.currentPrice) / formData.currentPrice) * 100;
+      
+      setFormData(prev => ({
+        ...prev,
+        stopLossPercentage: parseFloat(percentage.toFixed(4))
+      }));
+    }
+  };
+
+  // Calculate Target percentage from amount
+  const calculateTargetPercentage = () => {
+    if (formData.currentPrice > 0 && formData.targetPriceAmount > 0) {
+      const percentage = formData.orderType === 'BUY'
+        ? ((formData.targetPriceAmount - formData.currentPrice) / formData.currentPrice) * 100
+        : ((formData.currentPrice - formData.targetPriceAmount) / formData.currentPrice) * 100;
+      
+      setFormData(prev => ({
+        ...prev,
+        targetPricePercentage: parseFloat(percentage.toFixed(4))
+      }));
+    }
+  };
 
   const handleGetCurrentPrice = async () => {
     if (!formData.ticker.trim()) {
@@ -648,8 +693,15 @@ export default function AdvancedManualOrderPlacement({ onOrderPlaced }: Advanced
                   type="number"
                   id="stopLossPercentage"
                   value={formData.stopLossPercentage}
-                  onChange={(e) => handleInputChange('stopLossPercentage', parseFloat(e.target.value) || 0)}
-                  step="0.01"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Allow typing but limit to 4 decimal places
+                    if (value === '' || /^\d*\.?\d{0,4}$/.test(value)) {
+                      handleInputChange('stopLossPercentage', value === '' ? 0 : parseFloat(value));
+                    }
+                  }}
+                  onBlur={calculateStopLossAmount}
+                  step="0.0001"
                   min="0"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white text-sm"
                 />
@@ -667,15 +719,14 @@ export default function AdvancedManualOrderPlacement({ onOrderPlaced }: Advanced
                   onChange={(e) => {
                     const amount = parseFloat(e.target.value) || 0;
                     handleInputChange('stopLossAmount', amount);
-                    // Reverse calculate percentage
-                    if (formData.currentPrice > 0) {
-                      const percentage = formData.orderType === 'BUY'
-                        ? ((formData.currentPrice - amount) / formData.currentPrice) * 100
-                        : ((amount - formData.currentPrice) / formData.currentPrice) * 100;
-                      handleInputChange('stopLossPercentage', parseFloat(percentage.toFixed(2)));
-                    }
                   }}
-                  step="0.01"
+                  onBlur={() => {
+                    // Round to nearest tick size and recalculate percentage
+                    const rounded = roundToTickSize(formData.stopLossAmount);
+                    setFormData(prev => ({ ...prev, stopLossAmount: parseFloat(rounded.toFixed(2)) }));
+                    calculateStopLossPercentage();
+                  }}
+                  step="0.05"
                   min="0"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white text-sm"
                 />
@@ -690,8 +741,15 @@ export default function AdvancedManualOrderPlacement({ onOrderPlaced }: Advanced
                   type="number"
                   id="targetPricePercentage"
                   value={formData.targetPricePercentage}
-                  onChange={(e) => handleInputChange('targetPricePercentage', parseFloat(e.target.value) || 0)}
-                  step="0.01"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Allow typing but limit to 4 decimal places
+                    if (value === '' || /^\d*\.?\d{0,4}$/.test(value)) {
+                      handleInputChange('targetPricePercentage', value === '' ? 0 : parseFloat(value));
+                    }
+                  }}
+                  onBlur={calculateTargetAmount}
+                  step="0.0001"
                   min="0"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white text-sm"
                 />
@@ -709,15 +767,14 @@ export default function AdvancedManualOrderPlacement({ onOrderPlaced }: Advanced
                   onChange={(e) => {
                     const amount = parseFloat(e.target.value) || 0;
                     handleInputChange('targetPriceAmount', amount);
-                    // Reverse calculate percentage
-                    if (formData.currentPrice > 0) {
-                      const percentage = formData.orderType === 'BUY'
-                        ? ((amount - formData.currentPrice) / formData.currentPrice) * 100
-                        : ((formData.currentPrice - amount) / formData.currentPrice) * 100;
-                      handleInputChange('targetPricePercentage', parseFloat(percentage.toFixed(2)));
-                    }
                   }}
-                  step="0.01"
+                  onBlur={() => {
+                    // Round to nearest tick size and recalculate percentage
+                    const rounded = roundToTickSize(formData.targetPriceAmount);
+                    setFormData(prev => ({ ...prev, targetPriceAmount: parseFloat(rounded.toFixed(2)) }));
+                    calculateTargetPercentage();
+                  }}
+                  step="0.05"
                   min="0"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white text-sm"
                 />
@@ -769,7 +826,7 @@ export default function AdvancedManualOrderPlacement({ onOrderPlaced }: Advanced
 
           {/* Submit Buttons */}
           <div className="flex flex-col sm:flex-row justify-end gap-3">
-            <button
+            {/* <button
               type="submit"
               onClick={handleSubmit}
               disabled={isSubmitting || !formData.accountId || !formData.ticker || formData.currentPrice <= 0}
@@ -791,7 +848,7 @@ export default function AdvancedManualOrderPlacement({ onOrderPlaced }: Advanced
                   Place Order
                 </>
               )}
-            </button>
+            </button> */}
             <button
               type="button"
               onClick={handleSubmitAllAccounts}

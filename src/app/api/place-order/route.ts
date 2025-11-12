@@ -15,8 +15,17 @@ async function handleManualOrder(body: {
   accountId: number;
   orderType: 'BUY' | 'SELL';
   executionType?: 'MARKET' | 'LIMIT';
+  productType?: 'CNC' | 'INTRADAY';
   ticker: string;
   currentPrice: number;
+  customSettings?: {
+    availableFunds?: number;
+    leverage?: number;
+    stopLossPercentage?: number;
+    targetPricePercentage?: number;
+    riskOnCapital?: number;
+    enableTrailingStopLoss?: boolean;
+  };
 }, request: NextRequest) {
   try {
     // Verify user authentication for manual orders
@@ -47,7 +56,7 @@ async function handleManualOrder(body: {
       );
     }
 
-    const { accountId, orderType, executionType, ticker, currentPrice } = body;
+    const { accountId, orderType, executionType, productType, ticker, currentPrice, customSettings } = body;
 
     // Get account configuration
     const accountConfig = await getAccountConfiguration(accountId);
@@ -68,24 +77,40 @@ async function handleManualOrder(body: {
       custom_note: `Manual ${orderType} order for ${ticker} at ₹${currentPrice}`
     };
 
+    // Apply custom settings if provided (temporary override for this order only)
+    let effectiveAccountConfig = accountConfig;
+    if (customSettings) {
+      effectiveAccountConfig = {
+        ...accountConfig,
+        ...(customSettings.availableFunds !== undefined && { availableFunds: customSettings.availableFunds }),
+        ...(customSettings.leverage !== undefined && { leverage: customSettings.leverage }),
+        ...(customSettings.stopLossPercentage !== undefined && { stopLossPercentage: customSettings.stopLossPercentage }),
+        ...(customSettings.targetPricePercentage !== undefined && { targetPricePercentage: customSettings.targetPricePercentage }),
+        ...(customSettings.riskOnCapital !== undefined && { riskOnCapital: customSettings.riskOnCapital }),
+        ...(customSettings.enableTrailingStopLoss !== undefined && { enableTrailingStopLoss: customSettings.enableTrailingStopLoss })
+      };
+    }
+
     console.log(`📝 Placing manual order:`, {
       accountId,
       orderType,
       executionType,
+      productType: productType || 'INTRADAY (default)',
       ticker,
       currentPrice,
+      customSettings: customSettings || 'none',
       accountConfig: {
-        clientId: accountConfig.clientId,
-        availableFunds: accountConfig.availableFunds,
-        leverage: accountConfig.leverage
+        clientId: effectiveAccountConfig.clientId,
+        availableFunds: effectiveAccountConfig.availableFunds,
+        leverage: effectiveAccountConfig.leverage
       }
     });
 
     // Place order using the existing function
-    const dhanResponse = await placeDhanOrderForAccount(manualAlert, accountConfig, {
+    const dhanResponse = await placeDhanOrderForAccount(manualAlert, effectiveAccountConfig, {
       useAutoPositionSizing: true,
       exchangeSegment: process.env.DHAN_EXCHANGE_SEGMENT || 'NSE_EQ',
-      productType: process.env.DHAN_PRODUCT_TYPE || 'CNC',
+      productType: productType || process.env.DHAN_PRODUCT_TYPE || 'INTRADAY',
       orderType: executionType || 'MARKET' // Use execution type from form, fallback to MARKET
     });
 
@@ -178,8 +203,17 @@ async function handleManualOrder(body: {
 async function handleManualOrderAllAccounts(body: {
   orderType: 'BUY' | 'SELL';
   executionType?: 'MARKET' | 'LIMIT';
+  productType?: 'CNC' | 'INTRADAY';
   ticker: string;
   currentPrice: number;
+  customSettings?: {
+    availableFunds?: number;
+    leverage?: number;
+    stopLossPercentage?: number;
+    targetPricePercentage?: number;
+    riskOnCapital?: number;
+    enableTrailingStopLoss?: boolean;
+  };
 }, request: NextRequest) {
   try {
     // Verify user authentication for manual orders
@@ -210,7 +244,7 @@ async function handleManualOrderAllAccounts(body: {
       );
     }
 
-    const { orderType, executionType, ticker, currentPrice } = body;
+    const { orderType, executionType, productType, ticker, currentPrice, customSettings } = body;
 
     // Get all active account configurations
     const config = await loadAccountConfigurations();
@@ -236,8 +270,10 @@ async function handleManualOrderAllAccounts(body: {
     console.log(`📝 Placing manual order in all accounts:`, {
       orderType,
       executionType,
+      productType: productType || 'INTRADAY (default)',
       ticker,
       currentPrice,
+      customSettings: customSettings || 'none',
       accountCount: userAccounts.length,
       accounts: userAccounts.map(acc => ({
         accountId: acc.accountId,
@@ -252,10 +288,24 @@ async function handleManualOrderAllAccounts(body: {
 
     for (const accountConfig of userAccounts) {
       try {
-        const dhanResponse = await placeDhanOrderForAccount(manualAlert, accountConfig, {
+        // Apply custom settings if provided (temporary override for this order only)
+        let effectiveAccountConfig = accountConfig;
+        if (customSettings) {
+          effectiveAccountConfig = {
+            ...accountConfig,
+            ...(customSettings.availableFunds !== undefined && { availableFunds: customSettings.availableFunds }),
+            ...(customSettings.leverage !== undefined && { leverage: customSettings.leverage }),
+            ...(customSettings.stopLossPercentage !== undefined && { stopLossPercentage: customSettings.stopLossPercentage }),
+            ...(customSettings.targetPricePercentage !== undefined && { targetPricePercentage: customSettings.targetPricePercentage }),
+            ...(customSettings.riskOnCapital !== undefined && { riskOnCapital: customSettings.riskOnCapital }),
+            ...(customSettings.enableTrailingStopLoss !== undefined && { enableTrailingStopLoss: customSettings.enableTrailingStopLoss })
+          };
+        }
+
+        const dhanResponse = await placeDhanOrderForAccount(manualAlert, effectiveAccountConfig, {
           useAutoPositionSizing: true,
           exchangeSegment: process.env.DHAN_EXCHANGE_SEGMENT || 'NSE_EQ',
-          productType: process.env.DHAN_PRODUCT_TYPE || 'CNC',
+          productType: productType || process.env.DHAN_PRODUCT_TYPE || 'INTRADAY',
           orderType: executionType || 'MARKET'
         });
 
