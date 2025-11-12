@@ -26,7 +26,9 @@ export function validateTradingViewAlert(payload: unknown): { isValid: boolean; 
     // Handle price as string or number
     let price: number;
     if (typeof payloadObj.price === 'string') {
-      price = parseFloat(payloadObj.price);
+      // Clean price string: remove currency symbols (₹, Rs, $), commas, and spaces before parsing
+      const cleanedPrice = payloadObj.price.replace(/[₹Rs$,\s]/g, '');
+      price = parseFloat(cleanedPrice);
       if (isNaN(price)) {
         return { isValid: false, error: 'Price must be a valid number' };
       }
@@ -172,7 +174,9 @@ export function validateChartInkAlert(payload: unknown): { isValid: boolean; err
 
     // Validate that all prices are valid numbers
     for (const price of pricesArray) {
-      const numPrice = parseFloat(price);
+      // Clean price string: remove currency symbols (₹, Rs), commas, and spaces before parsing
+      const cleanedPrice = price.replace(/[₹Rs,\s]/g, '');
+      const numPrice = parseFloat(cleanedPrice);
       if (isNaN(numPrice) || numPrice <= 0) {
         return { isValid: false, error: `Invalid price: ${price}. All prices must be positive numbers` };
       }
@@ -230,7 +234,16 @@ export function processChartInkAlert(chartInkAlert: ChartInkAlert): ChartInkProc
   
   for (let i = 0; i < stocksArray.length; i++) {
     const ticker = stocksArray[i].toUpperCase();
-    const price = parseFloat(pricesArray[i]);
+    
+    // Clean price string: remove currency symbols (₹, Rs), commas, and spaces before parsing
+    const cleanedPrice = pricesArray[i].replace(/[₹Rs,\s]/g, '');
+    const price = parseFloat(cleanedPrice);
+    
+    // Validate that price is a valid number
+    if (isNaN(price) || price <= 0) {
+      console.error(`Invalid price for ${ticker}: "${pricesArray[i]}" (cleaned: "${cleanedPrice}")`);
+      continue; // Skip this alert if price is invalid
+    }
     
     // Use the current GMT time when the alert was received
     // This is more accurate than trying to parse ChartInk's time format

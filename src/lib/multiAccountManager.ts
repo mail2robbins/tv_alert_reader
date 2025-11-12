@@ -39,23 +39,36 @@ async function _loadAccountConfigurationsInternal(): Promise<MultiAccountConfig>
   // Only load from database on server side
   if (typeof window === 'undefined') {
     try {
-      // Try to fetch from internal API endpoint (server-side only)
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:5001';
-      const response = await fetch(`${baseUrl}/api/account-settings/config?activeOnly=false`, {
-        cache: 'no-store' // Don't cache to get fresh data
-      });
+      // Load directly from database to avoid circular API calls and cold start issues
+      const { getAllAccountSettings } = await import('./accountSettingsDatabase');
+      const dbSettings = await getAllAccountSettings(false);
       
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data.accounts.length > 0) {
-          accounts = data.data.accounts;
-          console.log(`Loaded ${accounts.length} account(s) from database via API`);
-        }
-      } else {
-        console.warn('Failed to fetch from API, will try fallback');
+      if (dbSettings && dbSettings.length > 0) {
+        accounts = dbSettings.map((setting) => ({
+          accountId: setting.id,
+          accessToken: setting.dhanAccessToken,
+          clientId: setting.dhanClientId,
+          availableFunds: setting.availableFunds,
+          leverage: setting.leverage,
+          maxPositionSize: setting.maxPositionSize,
+          minOrderValue: setting.minOrderValue,
+          maxOrderValue: setting.maxOrderValue,
+          stopLossPercentage: setting.stopLossPercentage,
+          targetPricePercentage: setting.targetPricePercentage,
+          riskOnCapital: setting.riskOnCapital,
+          isActive: setting.isActive,
+          enableTrailingStopLoss: setting.enableTrailingStopLoss,
+          minTrailJump: setting.minTrailJump,
+          rebaseTpAndSl: setting.rebaseTpAndSl,
+          rebaseThresholdPercentage: setting.rebaseThresholdPercentage,
+          allowDuplicateTickers: setting.allowDuplicateTickers,
+          orderType: setting.orderType,
+          limitBufferPercentage: setting.limitBufferPercentage
+        }));
+        console.log(`Loaded ${accounts.length} account(s) from database directly`);
       }
     } catch (error) {
-      console.warn('Failed to load account settings from API, falling back to .env:', error);
+      console.warn('Failed to load account settings from database, falling back to .env:', error);
     }
   }
   
