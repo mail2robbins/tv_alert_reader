@@ -30,6 +30,7 @@ export interface PositionCalculation {
   targetPrice?: number;
   accountId?: number;             // Account ID for multi-account support
   clientId?: string;              // Client ID for multi-account support
+  productType?: string;           // Product type (e.g., CNC, INTRADAY)
 }
 
 // Default fund configuration

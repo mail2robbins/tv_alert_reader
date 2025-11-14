@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { placeDhanOrder, placeDhanOrderOnAllAccounts, placeDhanOrderForAccount } from '@/lib/dhanApi';
 import { rebaseQueueManager } from '@/lib/rebaseQueueManager';
 import { storePlacedOrder, storeMultiplePlacedOrders } from '@/lib/orderTracker';
-import { calculatePositionSize, calculatePositionSizesForAllAccounts } from '@/lib/fundManager';
+import { calculatePositionSize, calculatePositionSizesForAllAccounts, calculatePositionSizeForAccount } from '@/lib/fundManager';
 import { logError } from '@/lib/fileLogger';
 import { getAccountConfiguration, loadAccountConfigurations } from '@/lib/multiAccountManager';
 import { extractTokenFromHeader, verifyToken } from '@/lib/auth';
@@ -106,6 +106,17 @@ async function handleManualOrder(body: {
       }
     });
 
+    // Calculate position sizing for this manual order using the (possibly overridden) account config
+    const positionCalculation = calculatePositionSizeForAccount(currentPrice, effectiveAccountConfig, orderType);
+    positionCalculation.productType = productType || process.env.DHAN_PRODUCT_TYPE || 'INTRADAY';
+
+    if (!positionCalculation.canPlaceOrder) {
+      return NextResponse.json(
+        { success: false, error: `Cannot place order: ${positionCalculation.reason}` } as ApiResponse<null>,
+        { status: 400 }
+      );
+    }
+
     // Place order using the existing function
     const dhanResponse = await placeDhanOrderForAccount(manualAlert, effectiveAccountConfig, {
       useAutoPositionSizing: true,
@@ -121,7 +132,7 @@ async function handleManualOrder(body: {
       manualOrderId, 
       dhanResponse.success ? 1 : 0, // We don't know the exact quantity here, but it's stored in the order
       dhanResponse, 
-      undefined // No position calculation for manual orders
+      positionCalculation
     );
 
     // Add to rebase queue if successful and rebasing is enabled
@@ -302,6 +313,17 @@ async function handleManualOrderAllAccounts(body: {
           };
         }
 
+        // Calculate position sizing for this manual order using the (possibly overridden) account config
+        const positionCalculation = calculatePositionSizeForAccount(currentPrice, effectiveAccountConfig, orderType);
+        positionCalculation.productType = productType || process.env.DHAN_PRODUCT_TYPE || 'INTRADAY';
+
+        if (!positionCalculation.canPlaceOrder) {
+          return NextResponse.json(
+            { success: false, error: `Cannot place order: ${positionCalculation.reason}` } as ApiResponse<null>,
+            { status: 400 }
+          );
+        }
+
         const dhanResponse = await placeDhanOrderForAccount(manualAlert, effectiveAccountConfig, {
           useAutoPositionSizing: true,
           exchangeSegment: process.env.DHAN_EXCHANGE_SEGMENT || 'NSE_EQ',
@@ -318,7 +340,7 @@ async function handleManualOrderAllAccounts(body: {
           manualOrderId,
           dhanResponse.success ? 1 : 0,
           dhanResponse,
-          undefined
+          positionCalculation
         );
 
         placedOrders.push(placedOrder);
