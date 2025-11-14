@@ -173,16 +173,18 @@ export default function OrdersTable({ orders, isLoading }: OrdersTableProps) {
                     )}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {order.orderId || order.correlationId}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   {order.error ? (
-                    <span className="inline-flex items-center px-2 py-1 rounded bg-red-50 text-red-700 max-w-xs" title={order.error}>
-                      {order.error}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-xs text-gray-500" title={order.error}>
+                        {order.error}
+                      </span>
+                    </div>
                   ) : (
-                    <span className="text-gray-400">-</span>
+                    <span className="text-xs text-gray-500">-</span>
                   )}
                 </td>
               </tr>
