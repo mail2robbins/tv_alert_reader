@@ -763,7 +763,15 @@ export async function getDhanOrderDetails(orderId: string, accessToken: string):
       throw new Error(`Failed to fetch order details: ${response.status} ${response.statusText} - ${errorText}`);
     }
     } catch (error) {
-      console.error(`❌ Error fetching order details (attempt ${attempt}/${maxRetries}):`, error);
+      const isAbortError = error instanceof Error && error.name === 'AbortError';
+
+      if (isAbortError) {
+        // Timeouts/aborts are expected occasionally; log a concise warning instead of dumping the whole DOMException
+        console.warn(`⏱️ Order details fetch aborted by timeout (attempt ${attempt}/${maxRetries}).`);
+      } else {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`❌ Error fetching order details (attempt ${attempt}/${maxRetries}): ${message}`);
+      }
       
       // Check if we should retry
       const isRetryableError = error instanceof Error && (

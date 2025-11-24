@@ -175,7 +175,21 @@ export async function POST(request: NextRequest) {
             if (validCalculations.length === 0) {
               const reasons = positionCalculations.map(calc => calc.reason).filter(Boolean);
               console.log('Cannot place order on any account:', reasons);
-              await logError('Order placement blocked on all accounts', new Error(reasons.join('; ') || 'No valid accounts'));
+
+              const combinedReason = reasons.join('; ') || 'No valid accounts';
+              const isOnlyMinLeveragedValueReason =
+                reasons.length > 0 &&
+                reasons.every(reason =>
+                  typeof reason === 'string' &&
+                  reason.includes('Leveraged value (₹') &&
+                  reason.includes('below minimum (₹')
+                );
+
+              if (isOnlyMinLeveragedValueReason) {
+                console.warn('Order placement blocked on all accounts due to minimum leveraged value rule:', combinedReason);
+              } else {
+                await logError('Order placement blocked on all accounts', new Error(combinedReason));
+              }
             } else {
               const dhanResponses = await placeDhanOrderOnAllAccounts(alert, {
                 useAutoPositionSizing: true,
