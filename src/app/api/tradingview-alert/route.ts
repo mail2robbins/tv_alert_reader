@@ -253,6 +253,15 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    // Wait for rebase queue to complete processing before sending response
+    // This ensures rebase operations complete in serverless environments
+    const queueStatus = rebaseQueueManager.getQueueStatus();
+    if (queueStatus.queueLength > 0 || queueStatus.processing) {
+      console.log(`⏳ Waiting for rebase queue to complete (${queueStatus.queueLength} items, processing: ${queueStatus.processing})`);
+      await rebaseQueueManager.waitForCompletion(25000); // Wait up to 25 seconds
+      console.log(`✅ Rebase queue processing completed`);
+    }
+    
     const processingTime = Date.now() - startTime;
     
     // Log successful processing

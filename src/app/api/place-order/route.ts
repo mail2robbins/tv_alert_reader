@@ -149,9 +149,14 @@ async function handleManualOrder(body: {
         orderType
       );
       
+      // Wait for rebase to complete before sending response
+      console.log(`⏳ Waiting for rebase queue to complete for order ${dhanResponse.orderId}`);
+      await rebaseQueueManager.waitForCompletion(25000);
+      console.log(`✅ Rebase queue processing completed`);
+      
       rebaseResult = {
         success: true,
-        message: 'Order added to rebase queue for delayed processing'
+        message: 'Order rebased successfully'
       };
     }
 
@@ -372,6 +377,14 @@ async function handleManualOrderAllAccounts(body: {
 
     const successfulOrders = dhanResponses.filter(resp => resp.success);
     const failedOrders = dhanResponses.filter(resp => !resp.success);
+
+    // Wait for rebase queue to complete processing before sending response
+    const queueStatus = rebaseQueueManager.getQueueStatus();
+    if (queueStatus.queueLength > 0 || queueStatus.processing) {
+      console.log(`⏳ Waiting for rebase queue to complete (${queueStatus.queueLength} items, processing: ${queueStatus.processing})`);
+      await rebaseQueueManager.waitForCompletion(25000);
+      console.log(`✅ Rebase queue processing completed`);
+    }
 
     return NextResponse.json(
       { 
