@@ -722,30 +722,38 @@ export async function getDhanOrderDetails(orderId: string, accessToken: string):
       console.log(`📋 Raw order details response:`, JSON.stringify(data, null, 2));
       
       // Validate that we have the expected structure
-      if (!data || typeof data !== 'object') {
+      if (!data) {
         throw new Error('Invalid response structure from Dhan API');
+      }
+      
+      // Handle both array and object responses
+      // The Dhan API returns an array with a single order object
+      const orderData = Array.isArray(data) ? data[0] : data;
+      
+      if (!orderData || typeof orderData !== 'object') {
+        throw new Error('Invalid order data structure from Dhan API');
       }
       
       // Map the response to our expected interface
       const orderDetails: DhanOrderDetails = {
-        orderId: data.orderId || orderId,
-        dhanClientId: data.dhanClientId || '',
-        correlationId: data.correlationId || '',
-        transactionType: data.transactionType || '',
-        exchangeSegment: data.exchangeSegment || '',
-        productType: data.productType || '',
-        orderType: data.orderType || '',
-        securityId: data.securityId || '',
-        quantity: data.quantity || 0,
-        price: data.price || 0,
-        averagePrice: data.averagePrice || data.avgPrice || null,
-        filledQuantity: data.filledQuantity || data.filledQty || 0,
-        status: data.status || data.orderStatus || 'UNKNOWN',
-        targetPrice: data.targetPrice || null,
-        stopLossPrice: data.stopLossPrice || null,
-        trailingJump: data.trailingJump || null,
-        orderTime: data.orderTime || null,
-        updateTime: data.updateTime || null
+        orderId: orderData.orderId || orderId,
+        dhanClientId: orderData.dhanClientId || '',
+        correlationId: orderData.correlationId || '',
+        transactionType: orderData.transactionType || '',
+        exchangeSegment: orderData.exchangeSegment || '',
+        productType: orderData.productType || '',
+        orderType: orderData.orderType || '',
+        securityId: orderData.securityId || '',
+        quantity: orderData.quantity || 0,
+        price: orderData.price || 0,
+        averagePrice: orderData.averagePrice || orderData.avgPrice || orderData.averageTradedPrice || null,
+        filledQuantity: orderData.filledQuantity || orderData.filledQty || 0,
+        status: orderData.status || orderData.orderStatus || 'UNKNOWN',
+        targetPrice: orderData.targetPrice || null,
+        stopLossPrice: orderData.stopLossPrice || null,
+        trailingJump: orderData.trailingJump || null,
+        orderTime: orderData.orderTime || orderData.createTime || null,
+        updateTime: orderData.updateTime || null
       };
       
       console.log(`✅ Mapped order details:`, {
