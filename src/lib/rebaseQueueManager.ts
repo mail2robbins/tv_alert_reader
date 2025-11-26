@@ -155,8 +155,18 @@ class RebaseQueueManager {
           rebasedData: result.rebasedData
         });
       } else {
-        // Check if we should retry
-        if (item.attempts < item.maxAttempts) {
+        // Check if this is a terminal failure (REJECTED, CANCELLED, etc.) that should not be retried
+        if (result.terminalFailure) {
+          console.error(`❌ Terminal failure for order ${item.orderId}: ${result.error}. Not retrying.`);
+          this.addResult({
+            orderId: item.orderId,
+            accountId: item.accountId,
+            clientId: item.clientId,
+            success: false,
+            error: result.error
+          });
+        } else if (item.attempts < item.maxAttempts) {
+          // Only retry if not a terminal failure and we haven't exceeded max attempts
           console.log(`⚠️ Rebase failed for order ${item.orderId}: ${result.error}. Retrying in ${this.DELAY_BETWEEN_ATTEMPTS}ms...`);
           await new Promise(resolve => setTimeout(resolve, this.DELAY_BETWEEN_ATTEMPTS));
           

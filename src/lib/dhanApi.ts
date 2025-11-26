@@ -687,6 +687,12 @@ export interface DhanOrderDetails {
   trailingJump?: number;
   orderTime?: string;
   updateTime?: string;
+  // Additional fields from DHAN API for better error handling
+  exchangeOrderId?: string;
+  tradingSymbol?: string;
+  remainingQuantity?: number;
+  omsErrorCode?: string;
+  omsErrorDescription?: string;
 }
 
 // Get order details by order ID with retry logic
@@ -753,7 +759,13 @@ export async function getDhanOrderDetails(orderId: string, accessToken: string):
         stopLossPrice: orderData.stopLossPrice || null,
         trailingJump: orderData.trailingJump || null,
         orderTime: orderData.orderTime || orderData.createTime || null,
-        updateTime: orderData.updateTime || null
+        updateTime: orderData.updateTime || null,
+        // Map error and additional fields
+        exchangeOrderId: orderData.exchangeOrderId || null,
+        tradingSymbol: orderData.tradingSymbol || null,
+        remainingQuantity: orderData.remainingQuantity || null,
+        omsErrorCode: orderData.omsErrorCode || null,
+        omsErrorDescription: orderData.omsErrorDescription || null
       };
       
       console.log(`✅ Mapped order details:`, {
@@ -761,7 +773,11 @@ export async function getDhanOrderDetails(orderId: string, accessToken: string):
         status: orderDetails.status,
         price: orderDetails.price,
         averagePrice: orderDetails.averagePrice,
-        filledQuantity: orderDetails.filledQuantity
+        filledQuantity: orderDetails.filledQuantity,
+        ...(orderDetails.status === 'REJECTED' && {
+          errorCode: orderDetails.omsErrorCode,
+          errorDescription: orderDetails.omsErrorDescription
+        })
       });
       
       return orderDetails;
@@ -927,6 +943,7 @@ export async function rebaseOrderTpAndSl(
   success: boolean;
   message?: string;
   error?: string;
+  terminalFailure?: boolean; // Flag to indicate non-retryable terminal failure
   rebasedData?: {
     originalTp?: number;
     originalSl?: number;
@@ -1032,10 +1049,29 @@ export async function rebaseOrderTpAndSl(
             console.log(`✅ Order in terminal state ${orderDetails.status} with valid entry price: ${actualEntryPrice}`);
             break;
           } else {
+            // For REJECTED orders, mark as non-retryable terminal failure
+            if (orderDetails.status === 'REJECTED') {
+              const errorMsg = orderDetails.omsErrorDescription || 'Order rejected by broker';
+              const errorCode = orderDetails.omsErrorCode || 'N/A';
+              console.log(`❌ Order REJECTED by broker, cannot rebase.`, {
+                orderId,
+                errorCode,
+                errorDescription: errorMsg,
+                tradingSymbol: orderDetails.tradingSymbol,
+                productType: orderDetails.productType
+              });
+              return { 
+                success: false, 
+                error: `REJECTED [${errorCode}]: ${errorMsg}`,
+                terminalFailure: true // Flag to prevent retries
+              };
+            }
+            
             console.log(`❌ Order in terminal state ${orderDetails.status} but no valid entry price available`);
             return { 
               success: false, 
-              error: `Order in terminal state ${orderDetails.status} but no valid entry price available` 
+              error: `Order in terminal state ${orderDetails.status} but no valid entry price available`,
+              terminalFailure: true // Flag to prevent retries for other terminal states without price
             };
           }
         }
