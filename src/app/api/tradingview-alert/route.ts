@@ -205,24 +205,17 @@ export async function POST(request: NextRequest) {
                 positionCalculations
               );
               
-              // Add successful orders to rebase queue for delayed processing
-              for (const dhanResponse of dhanResponses) {
-                if (dhanResponse.success && dhanResponse.orderId && dhanResponse.accountId && dhanResponse.clientId) {
-                  const accountConfig = await getAccountConfiguration(dhanResponse.accountId);
-                  if (accountConfig && accountConfig.rebaseTpAndSl) {
-                    console.log(`📝 Adding order ${dhanResponse.orderId} to rebase queue for account ${dhanResponse.clientId}`);
-                    
-                    rebaseQueueManager.addToQueue(
-                      dhanResponse.orderId,
-                      accountConfig,
-                      alert.price,
-                      dhanResponse.clientId,
-                      dhanResponse.accountId.toString(),
-                      alert.signal
-                    );
-                  }
-                }
-              }
+              // Use improved rebase approach - fetch all orders at once using super orders API
+              console.log(`🔄 [ALERT-REBASE] Triggering improved rebase for ${dhanResponses.length} orders`);
+              const { loadAccountConfigurations } = await import('@/lib/multiAccountManager');
+              const config = await loadAccountConfigurations();
+              const rebaseResults = await rebaseQueueManager.processAllAccountsOrdersNeedingRebase(config.activeAccounts);
+              
+              console.log(`✅ [ALERT-REBASE] Rebase completed for alert ${alertId}:`, {
+                accountsProcessed: rebaseResults.size,
+                totalOrders: Array.from(rebaseResults.values()).flat().length,
+                successfulRebases: Array.from(rebaseResults.values()).flat().filter(r => r.success).length
+              });
               
               allOrders.push(...placedOrders);
               totalSuccessfulOrders += placedOrders.filter(order => order.status === 'placed').length;

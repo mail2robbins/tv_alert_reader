@@ -703,6 +703,53 @@ export interface DhanOrderDetails {
   omsErrorDescription?: string;
 }
 
+// DHAN Super Order Leg Details
+export interface DhanSuperOrderLeg {
+  orderId: string;
+  legName: 'STOP_LOSS_LEG' | 'TARGET_LEG';
+  transactionType: 'BUY' | 'SELL';
+  remainingQuantity: number;
+  price: number;
+  orderStatus: string;
+  trailingJump?: number;
+}
+
+// DHAN Super Order interface
+export interface DhanSuperOrder {
+  orderId: string;
+  dhanClientId: string;
+  correlationId: string;
+  orderStatus: string;
+  transactionType: 'BUY' | 'SELL';
+  exchangeSegment: string;
+  productType: string;
+  orderType: string;
+  validity: string;
+  tradingSymbol: string;
+  securityId: string;
+  quantity: number;
+  disclosedQuantity: number;
+  price: number;
+  triggerPrice: number;
+  afterMarketOrder: boolean;
+  boProfitValue: number;
+  boStopLossValue: number;
+  legName: string;
+  createTime: string;
+  updateTime: string;
+  exchangeTime: string;
+  drvExpiryDate: string;
+  drvOptionType: string;
+  drvStrikePrice: number;
+  omsErrorCode: string;
+  omsErrorDescription: string;
+  algoId: string;
+  remainingQuantity: number;
+  averageTradedPrice: number;
+  filledQty: number;
+  legDetails?: DhanSuperOrderLeg[];
+}
+
 // Get order details by order ID with retry logic
 export async function getDhanOrderDetails(orderId: string, accessToken: string): Promise<DhanOrderDetails> {
   const maxRetries = 3;
@@ -938,6 +985,158 @@ export async function updateDhanOrderStopLoss(
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error occurred' 
     };
+  }
+}
+
+// Get all super orders for an account
+export async function getAllDhanSuperOrders(accessToken: string): Promise<DhanSuperOrder[]> {
+  try {
+    console.log('🔍 Fetching all super orders from DHAN API');
+    
+    const response = await fetch('https://api.dhan.co/v2/super/orders', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'access-token': accessToken
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Failed to fetch super orders:', errorText);
+      throw new Error(`Failed to fetch super orders: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log(`✅ Fetched ${Array.isArray(data) ? data.length : 0} super orders`);
+    
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Error fetching super orders:', error);
+    throw error;
+  }
+}
+
+// Get orders that need rebasing (TRADED with PENDING legs)
+export async function getOrdersNeedingRebase(
+  accessToken: string,
+  accountConfig: DhanAccountConfig
+): Promise<Array<{
+  order: DhanSuperOrder;
+  entryPrice: number;
+  currentStopLoss: number | null;
+  currentTarget: number | null;
+  needsRebase: boolean;
+  reason?: string;
+}>> {
+  try {
+    const allOrders = await getAllDhanSuperOrders(accessToken);
+    
+    const ordersNeedingRebase = allOrders
+      .filter(order => {
+        // Only process TRADED orders
+        if (order.orderStatus !== 'TRADED') {
+          return false;
+        }
+        
+        // Must have leg details
+        if (!order.legDetails || order.legDetails.length === 0) {
+          return false;
+        }
+        
+        // Check if both legs are PENDING
+        const stopLossLeg = order.legDetails.find(leg => leg.legName === 'STOP_LOSS_LEG');
+        const targetLeg = order.legDetails.find(leg => leg.legName === 'TARGET_LEG');
+        
+        return stopLossLeg?.orderStatus === 'PENDING' && targetLeg?.orderStatus === 'PENDING';
+      })
+      .map(order => {
+        const entryPrice = order.averageTradedPrice || order.price;
+        const stopLossLeg = order.legDetails!.find(leg => leg.legName === 'STOP_LOSS_LEG');
+        const targetLeg = order.legDetails!.find(leg => leg.legName === 'TARGET_LEG');
+        
+        const currentStopLoss = stopLossLeg?.price || null;
+        const currentTarget = targetLeg?.price || null;
+        
+        // Calculate what the SL and TP should be based on entry price
+        const signal = order.transactionType as 'BUY' | 'SELL';
+        let expectedStopLoss: number;
+        let expectedTarget: number;
+        
+        if (signal === 'BUY') {
+          expectedStopLoss = entryPrice * (1 - accountConfig.stopLossPercentage);
+          expectedTarget = entryPrice * (1 + accountConfig.targetPricePercentage);
+        } else {
+          expectedStopLoss = entryPrice * (1 + accountConfig.stopLossPercentage);
+          expectedTarget = entryPrice * (1 - accountConfig.targetPricePercentage);
+        }
+        
+        // Round to 2 decimal places
+        expectedStopLoss = Math.round(expectedStopLoss * 100) / 100;
+        expectedTarget = Math.round(expectedTarget * 100) / 100;
+        
+        // Check if rebase is needed (price difference threshold)
+        const rebaseThreshold = accountConfig.rebaseThresholdPercentage || 0.005; // 0.5% default
+        
+        let needsRebase = false;
+        let reason = '';
+        
+        if (currentStopLoss) {
+          const slDiff = Math.abs(currentStopLoss - expectedStopLoss) / entryPrice;
+          if (slDiff > rebaseThreshold) {
+            needsRebase = true;
+            reason = `SL diff: ${(slDiff * 100).toFixed(2)}%`;
+          }
+        }
+        
+        if (currentTarget) {
+          const tpDiff = Math.abs(currentTarget - expectedTarget) / entryPrice;
+          if (tpDiff > rebaseThreshold) {
+            needsRebase = true;
+            reason += (reason ? ', ' : '') + `TP diff: ${(tpDiff * 100).toFixed(2)}%`;
+          }
+        }
+        
+        return {
+          order,
+          entryPrice,
+          currentStopLoss,
+          currentTarget,
+          needsRebase,
+          reason: needsRebase ? reason : undefined
+        };
+      });
+    
+    const needingRebase = ordersNeedingRebase.filter(item => item.needsRebase);
+    const withinThreshold = ordersNeedingRebase.filter(item => !item.needsRebase);
+    
+    console.log(`📊 [REBASE-SUPER-API] Order analysis:`, {
+      totalTradedOrders: ordersNeedingRebase.length,
+      needingRebase: needingRebase.length,
+      withinThreshold: withinThreshold.length
+    });
+    
+    if (withinThreshold.length > 0) {
+      console.log(`✅ [REBASE-SUPER-API] ${withinThreshold.length} orders already within threshold (likely already rebased):`, 
+        withinThreshold.map(item => ({
+          orderId: item.order.orderId,
+          symbol: item.order.tradingSymbol,
+          slDiff: item.currentStopLoss ? 
+            `${(Math.abs(item.currentStopLoss - (item.order.transactionType === 'BUY' ? 
+              item.entryPrice * (1 - accountConfig.stopLossPercentage) : 
+              item.entryPrice * (1 + accountConfig.stopLossPercentage))) / item.entryPrice * 100).toFixed(3)}%` : 'N/A',
+          tpDiff: item.currentTarget ? 
+            `${(Math.abs(item.currentTarget - (item.order.transactionType === 'BUY' ? 
+              item.entryPrice * (1 + accountConfig.targetPricePercentage) : 
+              item.entryPrice * (1 - accountConfig.targetPricePercentage))) / item.entryPrice * 100).toFixed(3)}%` : 'N/A'
+        }))
+      );
+    }
+    
+    return ordersNeedingRebase;
+  } catch (error) {
+    console.error('Error getting orders needing rebase:', error);
+    throw error;
   }
 }
 
@@ -1258,6 +1457,159 @@ export async function rebaseOrderTpAndSl(
 
   } catch (error) {
     console.error(`❌ Error during TP/SL rebase for order ${orderId}:`, error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error during rebase'
+    };
+  }
+}
+
+// Improved rebase function using super orders API
+export async function rebaseSuperOrderTpAndSl(
+  order: DhanSuperOrder,
+  accountConfig: DhanAccountConfig
+): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+  rebasedData?: {
+    originalTp?: number;
+    originalSl?: number;
+    newTp?: number;
+    newSl?: number;
+    actualEntryPrice?: number;
+  };
+}> {
+  try {
+    const orderId = order.orderId;
+    const entryPrice = order.averageTradedPrice || order.price;
+    const signal = order.transactionType;
+    
+    console.log(`🔄 Rebasing super order ${orderId} with entry price ₹${entryPrice}`);
+    
+    // Get current leg prices
+    const stopLossLeg = order.legDetails?.find(leg => leg.legName === 'STOP_LOSS_LEG');
+    const targetLeg = order.legDetails?.find(leg => leg.legName === 'TARGET_LEG');
+    
+    if (!stopLossLeg || !targetLeg) {
+      return {
+        success: false,
+        error: 'Order missing stop loss or target leg details'
+      };
+    }
+    
+    const currentStopLoss = stopLossLeg.price;
+    const currentTarget = targetLeg.price;
+    
+    // Calculate new TP/SL based on entry price
+    let newStopLossPrice: number;
+    let newTargetPrice: number;
+    
+    if (signal === 'BUY') {
+      newStopLossPrice = entryPrice * (1 - accountConfig.stopLossPercentage);
+      newTargetPrice = entryPrice * (1 + accountConfig.targetPricePercentage);
+    } else {
+      newStopLossPrice = entryPrice * (1 + accountConfig.stopLossPercentage);
+      newTargetPrice = entryPrice * (1 - accountConfig.targetPricePercentage);
+    }
+    
+    // Round to 2 decimal places
+    newStopLossPrice = Math.round(newStopLossPrice * 100) / 100;
+    newTargetPrice = Math.round(newTargetPrice * 100) / 100;
+    
+    const rebaseResults = {
+      originalTp: currentTarget,
+      originalSl: currentStopLoss,
+      newTp: newTargetPrice,
+      newSl: newStopLossPrice,
+      actualEntryPrice: entryPrice
+    };
+    
+    console.log(`🎯 Recalculating TP/SL for ${signal} signal:`, {
+      signal,
+      actualEntryPrice: entryPrice,
+      originalTp: currentTarget,
+      originalSl: currentStopLoss,
+      newTp: newTargetPrice.toFixed(2),
+      newSl: newStopLossPrice.toFixed(2)
+    });
+    
+    // Check if rebase is needed
+    const rebaseThreshold = accountConfig.rebaseThresholdPercentage || 0.005;
+    const slDiff = Math.abs(currentStopLoss - newStopLossPrice) / entryPrice;
+    const tpDiff = Math.abs(currentTarget - newTargetPrice) / entryPrice;
+    
+    if (slDiff <= rebaseThreshold && tpDiff <= rebaseThreshold) {
+      console.log(`✅ No rebase needed - differences within threshold (${(rebaseThreshold * 100).toFixed(2)}%)`);
+      return {
+        success: true,
+        message: 'No rebase needed - prices within threshold',
+        rebasedData: rebaseResults
+      };
+    }
+    
+    // Update target price if needed
+    let tpUpdateResult;
+    if (tpDiff > rebaseThreshold) {
+      console.log(`📈 Updating target price from ₹${currentTarget.toFixed(2)} to ₹${newTargetPrice.toFixed(2)}`);
+      tpUpdateResult = await updateDhanOrderTargetPrice(
+        orderId,
+        order.dhanClientId,
+        newTargetPrice,
+        accountConfig.accessToken
+      );
+      
+      if (!tpUpdateResult.success) {
+        console.error(`❌ Failed to update target price: ${tpUpdateResult.error}`);
+      } else {
+        console.log(`✅ Target price updated successfully: ₹${newTargetPrice.toFixed(2)}`);
+      }
+    }
+    
+    // Update stop loss if needed
+    let slUpdateResult;
+    if (slDiff > rebaseThreshold) {
+      console.log(`📉 Updating stop loss from ₹${currentStopLoss.toFixed(2)} to ₹${newStopLossPrice.toFixed(2)}`);
+      slUpdateResult = await updateDhanOrderStopLoss(
+        orderId,
+        order.dhanClientId,
+        newStopLossPrice,
+        accountConfig.accessToken,
+        accountConfig.enableTrailingStopLoss ? accountConfig.minTrailJump : undefined
+      );
+      
+      if (!slUpdateResult.success) {
+        console.error(`❌ Failed to update stop loss: ${slUpdateResult.error}`);
+      } else {
+        console.log(`✅ Stop loss updated successfully: ₹${newStopLossPrice.toFixed(2)}`);
+      }
+    }
+    
+    // Check if both updates were successful
+    const tpSuccess = tpDiff <= rebaseThreshold || tpUpdateResult?.success;
+    const slSuccess = slDiff <= rebaseThreshold || slUpdateResult?.success;
+    
+    if (tpSuccess && slSuccess) {
+      console.log(`🎉 TP/SL rebase completed successfully for order ${orderId}`);
+      return {
+        success: true,
+        message: 'TP/SL rebased successfully based on actual entry price',
+        rebasedData: rebaseResults
+      };
+    } else {
+      const errors = [];
+      if (!tpSuccess) errors.push(`TP update failed: ${tpUpdateResult?.error}`);
+      if (!slSuccess) errors.push(`SL update failed: ${slUpdateResult?.error}`);
+      
+      return {
+        success: false,
+        error: `Partial rebase failure: ${errors.join(', ')}`,
+        rebasedData: rebaseResults
+      };
+    }
+    
+  } catch (error) {
+    console.error(`❌ Error during TP/SL rebase for super order:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error during rebase'

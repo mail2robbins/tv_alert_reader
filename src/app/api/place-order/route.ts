@@ -135,29 +135,31 @@ async function handleManualOrder(body: {
       positionCalculation
     );
 
-    // Add to rebase queue if successful and rebasing is enabled
+    // Use improved rebase approach if successful and rebasing is enabled
     let rebaseResult = null;
     if (dhanResponse.success && dhanResponse.orderId && accountConfig.rebaseTpAndSl) {
-      console.log(`📝 Adding manual order ${dhanResponse.orderId} to rebase queue for account ${accountConfig.clientId}`);
+      console.log(`🔄 [MANUAL-REBASE] Triggering improved rebase for order ${dhanResponse.orderId} on account ${accountConfig.clientId}`);
       
-      rebaseQueueManager.addToQueue(
-        dhanResponse.orderId,
-        accountConfig,
-        currentPrice,
-        accountConfig.clientId,
-        accountId.toString(),
-        orderType
-      );
-      
-      // Wait for rebase to complete before sending response
-      console.log(`⏳ Waiting for rebase queue to complete for order ${dhanResponse.orderId}`);
-      await rebaseQueueManager.waitForCompletion(25000);
-      console.log(`✅ Rebase queue processing completed`);
-      
-      rebaseResult = {
-        success: true,
-        message: 'Order rebased successfully'
-      };
+      try {
+        const results = await rebaseQueueManager.processAllOrdersNeedingRebase(accountConfig);
+        const orderRebase = results.find(r => r.orderId === dhanResponse.orderId);
+        
+        rebaseResult = {
+          success: orderRebase?.success || results.length > 0,
+          message: orderRebase?.message || `Processed ${results.length} orders needing rebase`,
+          ordersProcessed: results.length,
+          successfulRebases: results.filter(r => r.success).length,
+          rebasedData: orderRebase?.rebasedData
+        };
+        
+        console.log(`✅ [MANUAL-REBASE] Rebase completed for manual order:`, rebaseResult);
+      } catch (error) {
+        console.error(`❌ [MANUAL-REBASE] Rebase failed:`, error);
+        rebaseResult = {
+          success: false,
+          message: error instanceof Error ? error.message : 'Rebase failed'
+        };
+      }
     }
 
     return NextResponse.json(
@@ -349,20 +351,6 @@ async function handleManualOrderAllAccounts(body: {
         );
 
         placedOrders.push(placedOrder);
-
-        // Add to rebase queue if successful and rebasing is enabled
-        if (dhanResponse.success && dhanResponse.orderId && accountConfig.rebaseTpAndSl) {
-          console.log(`📝 Adding manual order ${dhanResponse.orderId} to rebase queue for account ${accountConfig.clientId}`);
-          
-          rebaseQueueManager.addToQueue(
-            dhanResponse.orderId,
-            accountConfig,
-            currentPrice,
-            accountConfig.clientId,
-            accountConfig.accountId.toString(),
-            orderType
-          );
-        }
       } catch (error) {
         console.error(`Error placing order for account ${accountConfig.accountId}:`, error);
         dhanResponses.push({
@@ -378,13 +366,15 @@ async function handleManualOrderAllAccounts(body: {
     const successfulOrders = dhanResponses.filter(resp => resp.success);
     const failedOrders = dhanResponses.filter(resp => !resp.success);
 
-    // Wait for rebase queue to complete processing before sending response
-    const queueStatus = rebaseQueueManager.getQueueStatus();
-    if (queueStatus.queueLength > 0 || queueStatus.processing) {
-      console.log(`⏳ Waiting for rebase queue to complete (${queueStatus.queueLength} items, processing: ${queueStatus.processing})`);
-      await rebaseQueueManager.waitForCompletion(25000);
-      console.log(`✅ Rebase queue processing completed`);
-    }
+    // Use improved rebase approach - process all accounts at once
+    console.log(`🔄 [MANUAL-ALL-REBASE] Triggering improved rebase for ${successfulOrders.length} successful orders across ${userAccounts.length} accounts`);
+    const rebaseResults = await rebaseQueueManager.processAllAccountsOrdersNeedingRebase(userAccounts);
+    
+    console.log(`✅ [MANUAL-ALL-REBASE] Rebase completed:`, {
+      accountsProcessed: rebaseResults.size,
+      totalOrders: Array.from(rebaseResults.values()).flat().length,
+      successfulRebases: Array.from(rebaseResults.values()).flat().filter(r => r.success).length
+    });
 
     return NextResponse.json(
       { 
