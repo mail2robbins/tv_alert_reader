@@ -336,11 +336,19 @@ export async function placeDhanOrderForAccount(
       }
       
       // Round to nearest valid tick size based on NSE price ranges
-      // NSE tick size rules:
+      // NSE tick size rules (as per NSE regulations):
       // 0.00 - 999.95: tick size = 0.05
-      // 1000.00 - 9999.95: tick size = 0.05
-      // 10000.00+: tick size = 0.05
-      const tickSize = 0.05;
+      // 1000.00 - 9999.95: tick size = 0.10
+      // 10000.00+: tick size = 0.25
+      let tickSize: number;
+      if (orderPrice < 1000) {
+        tickSize = 0.05;
+      } else if (orderPrice < 10000) {
+        tickSize = 0.10;
+      } else {
+        tickSize = 0.25;
+      }
+      
       orderPrice = Math.round(orderPrice / tickSize) * tickSize;
       
       // Round to 2 decimal places to avoid floating point precision issues
