@@ -747,6 +747,7 @@ export interface DhanSuperOrder {
   remainingQuantity: number;
   averageTradedPrice: number;
   filledQty: number;
+  ltp?: number; // Last Traded Price from market data
   legDetails?: DhanSuperOrderLeg[];
 }
 
@@ -1051,7 +1052,8 @@ export async function getOrdersNeedingRebase(
         return stopLossLeg?.orderStatus === 'PENDING' && targetLeg?.orderStatus === 'PENDING';
       })
       .map(order => {
-        const entryPrice = order.averageTradedPrice || order.price;
+        // Use LTP (Last Traded Price) if available, otherwise fall back to averageTradedPrice or price
+        const entryPrice = order.ltp || order.averageTradedPrice || order.price;
         const stopLossLeg = order.legDetails!.find(leg => leg.legName === 'STOP_LOSS_LEG');
         const targetLeg = order.legDetails!.find(leg => leg.legName === 'TARGET_LEG');
         
@@ -1482,10 +1484,16 @@ export async function rebaseSuperOrderTpAndSl(
 }> {
   try {
     const orderId = order.orderId;
-    const entryPrice = order.averageTradedPrice || order.price;
+    // Use LTP (Last Traded Price) if available, otherwise fall back to averageTradedPrice or price
+    const entryPrice = order.ltp || order.averageTradedPrice || order.price;
     const signal = order.transactionType;
     
-    console.log(`🔄 Rebasing super order ${orderId} with entry price ₹${entryPrice}`);
+    console.log(`🔄 Rebasing super order ${orderId} with entry price ₹${entryPrice}`, {
+      ltp: order.ltp,
+      averageTradedPrice: order.averageTradedPrice,
+      price: order.price,
+      selectedEntryPrice: entryPrice
+    });
     
     // Get current leg prices
     const stopLossLeg = order.legDetails?.find(leg => leg.legName === 'STOP_LOSS_LEG');
