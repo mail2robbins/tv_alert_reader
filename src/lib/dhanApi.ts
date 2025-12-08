@@ -1112,26 +1112,45 @@ export async function getOrdersNeedingRebase(
     const needingRebase = ordersNeedingRebase.filter(item => item.needsRebase);
     const withinThreshold = ordersNeedingRebase.filter(item => !item.needsRebase);
     
+    const rebaseThreshold = accountConfig.rebaseThresholdPercentage || 0.005;
+    const thresholdPercent = (rebaseThreshold * 100).toFixed(2);
+    
     console.log(`📊 [REBASE-SUPER-API] Order analysis:`, {
       totalTradedOrders: ordersNeedingRebase.length,
       needingRebase: needingRebase.length,
-      withinThreshold: withinThreshold.length
+      withinThreshold: withinThreshold.length,
+      rebaseThreshold: `${thresholdPercent}%`
     });
     
     if (withinThreshold.length > 0) {
-      console.log(`✅ [REBASE-SUPER-API] ${withinThreshold.length} orders already within threshold (likely already rebased):`, 
-        withinThreshold.map(item => ({
-          orderId: item.order.orderId,
-          symbol: item.order.tradingSymbol,
-          slDiff: item.currentStopLoss ? 
-            `${(Math.abs(item.currentStopLoss - (item.order.transactionType === 'BUY' ? 
-              item.entryPrice * (1 - accountConfig.stopLossPercentage) : 
-              item.entryPrice * (1 + accountConfig.stopLossPercentage))) / item.entryPrice * 100).toFixed(3)}%` : 'N/A',
-          tpDiff: item.currentTarget ? 
-            `${(Math.abs(item.currentTarget - (item.order.transactionType === 'BUY' ? 
-              item.entryPrice * (1 + accountConfig.targetPricePercentage) : 
-              item.entryPrice * (1 - accountConfig.targetPricePercentage))) / item.entryPrice * 100).toFixed(3)}%` : 'N/A'
-        }))
+      console.log(`✅ [REBASE-SUPER-API] ${withinThreshold.length} orders already within threshold (threshold: ${thresholdPercent}%):`, 
+        withinThreshold.map(item => {
+          const expectedSL = item.order.transactionType === 'BUY' 
+            ? item.entryPrice * (1 - accountConfig.stopLossPercentage) 
+            : item.entryPrice * (1 + accountConfig.stopLossPercentage);
+          const expectedTP = item.order.transactionType === 'BUY' 
+            ? item.entryPrice * (1 + accountConfig.targetPricePercentage) 
+            : item.entryPrice * (1 - accountConfig.targetPricePercentage);
+          
+          const slDiffAmount = item.currentStopLoss ? Math.abs(item.currentStopLoss - expectedSL) : null;
+          const tpDiffAmount = item.currentTarget ? Math.abs(item.currentTarget - expectedTP) : null;
+          const slDiffPercent = slDiffAmount ? (slDiffAmount / item.entryPrice * 100) : null;
+          const tpDiffPercent = tpDiffAmount ? (tpDiffAmount / item.entryPrice * 100) : null;
+          const thresholdAmount = item.entryPrice * rebaseThreshold;
+          
+          return {
+            orderId: item.order.orderId,
+            symbol: item.order.tradingSymbol,
+            entryPrice: `₹${item.entryPrice.toFixed(2)}`,
+            currentSL: item.currentStopLoss ? `₹${item.currentStopLoss.toFixed(2)}` : 'N/A',
+            expectedSL: `₹${expectedSL.toFixed(2)}`,
+            slDiff: slDiffPercent ? `${slDiffPercent.toFixed(3)}% (₹${slDiffAmount!.toFixed(2)})` : 'N/A',
+            currentTP: item.currentTarget ? `₹${item.currentTarget.toFixed(2)}` : 'N/A',
+            expectedTP: `₹${expectedTP.toFixed(2)}`,
+            tpDiff: tpDiffPercent ? `${tpDiffPercent.toFixed(3)}% (₹${tpDiffAmount!.toFixed(2)})` : 'N/A',
+            threshold: `${thresholdPercent}% (₹${thresholdAmount.toFixed(2)})`
+          };
+        })
       );
     }
     
