@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { ThemeSwitch } from '@/components/ThemeSwitch';
+import BuyOrderModal from '@/components/BuyOrderModal';
 
 interface StockData {
   symbol: string;
@@ -17,12 +18,24 @@ interface StockData {
   volume: number;
 }
 
+interface OrderResult {
+  symbol: string;
+  success: boolean;
+  message: string;
+  orderId?: string;
+  quantity?: number;
+  orderValue?: number;
+}
+
 export default function TopGainersPage() {
   const router = useRouter();
   const [topGainers, setTopGainers] = useState<StockData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
+  const [orderResult, setOrderResult] = useState<OrderResult | null>(null);
+  const [selectedStock, setSelectedStock] = useState<StockData | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchTopGainers = async () => {
     setIsLoading(true);
@@ -63,6 +76,21 @@ export default function TopGainersPage() {
       return (volume / 1000).toFixed(2) + ' K';
     }
     return volume.toString();
+  };
+
+  const handleBuyClick = (stock: StockData) => {
+    setSelectedStock(stock);
+    setIsModalOpen(true);
+    setOrderResult(null);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setSelectedStock(null);
+  };
+
+  const handleOrderPlaced = (result: OrderResult) => {
+    setOrderResult(result);
   };
 
   return (
@@ -140,6 +168,52 @@ export default function TopGainersPage() {
             </div>
           )}
 
+          {/* Order Result Notification */}
+          {orderResult && (
+            <div className={`mb-8 rounded-lg p-4 ${
+              orderResult.success 
+                ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' 
+                : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+            }`}>
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-3">
+                  {orderResult.success ? (
+                    <svg className="h-6 w-6 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  ) : (
+                    <svg className="h-6 w-6 text-red-600 dark:text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  <div>
+                    <h4 className={`font-medium ${orderResult.success ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}`}>
+                      {orderResult.success ? 'Order Placed Successfully' : 'Order Failed'} - {orderResult.symbol}
+                    </h4>
+                    <p className={`text-sm mt-1 ${orderResult.success ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                      {orderResult.message}
+                    </p>
+                    {orderResult.success && orderResult.orderId && (
+                      <div className="mt-2 text-sm text-green-600 dark:text-green-400">
+                        <p>Order ID: {orderResult.orderId}</p>
+                        {orderResult.quantity && <p>Quantity: {orderResult.quantity}</p>}
+                        {orderResult.orderValue && <p>Order Value: ₹{orderResult.orderValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setOrderResult(null)}
+                  className={`p-1 rounded-full hover:bg-opacity-20 ${orderResult.success ? 'hover:bg-green-600' : 'hover:bg-red-600'}`}
+                >
+                  <svg className={`h-5 w-5 ${orderResult.success ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Top Gainers Table */}
           {topGainers.length > 0 && (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
@@ -173,6 +247,9 @@ export default function TopGainersPage() {
                       </th>
                       <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         Volume
+                      </th>
+                      <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Action
                       </th>
                     </tr>
                   </thead>
@@ -224,6 +301,17 @@ export default function TopGainersPage() {
                             {formatVolume(stock.volume)}
                           </span>
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <button
+                            onClick={() => handleBuyClick(stock)}
+                            className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 flex items-center gap-2 mx-auto"
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            Buy
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -255,6 +343,14 @@ export default function TopGainersPage() {
           </div>
         </div>
       </div>
+
+      {/* Buy Order Modal */}
+      <BuyOrderModal
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+        stock={selectedStock}
+        onOrderPlaced={handleOrderPlaced}
+      />
     </ProtectedRoute>
   );
 }
