@@ -291,7 +291,16 @@ export default function Home() {
                     </p>
                   )}
                 </div>
-              <div className="flex flex-col sm:flex-row gap-3 lg:flex-shrink-0">
+              <div className="flex flex-col sm:flex-row gap-3 lg:flex-shrink-0 flex-wrap">
+                <button
+                  onClick={() => router.push('/top-gainers')}
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 flex items-center justify-center gap-2 text-sm"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  </svg>
+                  NSE-50 Top Gainers
+                </button>
                 <button
                   onClick={() => router.push('/manual-order')}
                   className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center justify-center gap-2 text-sm"
