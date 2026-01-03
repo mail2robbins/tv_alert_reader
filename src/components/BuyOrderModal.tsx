@@ -45,8 +45,47 @@ export default function BuyOrderModal({ isOpen, onClose, stock, onOrderPlaced }:
 
   // Load accounts when modal opens
   useEffect(() => {
+    const fetchAccounts = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const response = await fetch('/api/account-config');
+        const data = await response.json();
+
+        if (data.success && data.data.config && data.data.config.accounts) {
+          let filteredAccounts = data.data.config.accounts;
+
+          if (user?.dhanClientId) {
+            filteredAccounts = data.data.config.accounts.filter(
+              (account: DhanAccountConfig) => account.clientId === user.dhanClientId
+            );
+
+            if (filteredAccounts.length === 0) {
+              setError(`No accounts found for your DHAN Client ID: ${user.dhanClientId}`);
+              return;
+            }
+          } else {
+            setError('Your account does not have a DHAN Client ID assigned.');
+            return;
+          }
+
+          setAccounts(filteredAccounts);
+          if (filteredAccounts.length > 0) {
+            setSelectedAccountId(filteredAccounts[0].accountId.toString());
+          }
+        } else {
+          setError('Failed to load account configurations');
+        }
+      } catch (err) {
+        console.error('Error loading accounts:', err);
+        setError('Failed to load account configurations');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     if (isOpen && user) {
-      loadAccounts();
+      fetchAccounts();
     }
   }, [isOpen, user]);
 
@@ -60,99 +99,12 @@ export default function BuyOrderModal({ isOpen, onClose, stock, onOrderPlaced }:
     }
   }, [stock]);
 
-  const loadAccounts = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const response = await fetch('/api/account-config');
-      const data = await response.json();
-
-      if (data.success && data.data.config && data.data.config.accounts) {
-        let filteredAccounts = data.data.config.accounts;
-
-        if (user?.dhanClientId) {
-          filteredAccounts = data.data.config.accounts.filter(
-            (account: DhanAccountConfig) => account.clientId === user.dhanClientId
-          );
-
-          if (filteredAccounts.length === 0) {
-            setError(`No accounts found for your DHAN Client ID: ${user.dhanClientId}`);
-            return;
-          }
-        } else {
-          setError('Your account does not have a DHAN Client ID assigned.');
-          return;
-        }
-
-        setAccounts(filteredAccounts);
-        if (filteredAccounts.length > 0) {
-          setSelectedAccountId(filteredAccounts[0].accountId.toString());
-        }
-      } else {
-        setError('Failed to load account configurations');
-      }
-    } catch (err) {
-      console.error('Error loading accounts:', err);
-      setError('Failed to load account configurations');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleInputChange = (field: keyof OrderFormData, value: string | number) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
     if (error) setError(null);
-  };
-
-  const handleSubmit = async () => {
-    if (!token || !stock || !selectedAccountId) {
-      setError('Missing required information');
-      return;
-    }
-
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      const response = await fetch('/api/quick-buy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          ticker: stock.symbol,
-          currentPrice: formData.executionType === 'LIMIT' ? formData.price : stock.currentPrice,
-          productType: formData.productType,
-          executionType: formData.executionType,
-          accountId: parseInt(selectedAccountId)
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        onOrderPlaced({
-          symbol: stock.symbol,
-          success: true,
-          message: 'Order placed successfully!',
-          orderId: data.data.orderId,
-          quantity: data.data.quantity,
-          orderValue: data.data.orderValue
-        });
-        onClose();
-      } else {
-        setError(data.error || 'Order placement failed');
-      }
-    } catch (err) {
-      console.error('Error placing order:', err);
-      setError('Failed to connect to the server');
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   const handleSubmitAllAccounts = async () => {
