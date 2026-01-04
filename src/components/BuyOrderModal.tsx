@@ -39,6 +39,7 @@ export default function BuyOrderModal({ isOpen, onClose, stock, onOrderPlaced }:
   });
   const [accounts, setAccounts] = useState<DhanAccountConfig[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+  const [customAvailableFunds, setCustomAvailableFunds] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -99,6 +100,18 @@ export default function BuyOrderModal({ isOpen, onClose, stock, onOrderPlaced }:
     }
   }, [stock]);
 
+  // Update custom available funds when selected account changes
+  useEffect(() => {
+    if (selectedAccountId && accounts.length > 0) {
+      const selectedAccount = accounts.find(
+        (account) => account.accountId.toString() === selectedAccountId
+      );
+      if (selectedAccount) {
+        setCustomAvailableFunds(selectedAccount.availableFunds);
+      }
+    }
+  }, [selectedAccountId, accounts]);
+
   const handleInputChange = (field: keyof OrderFormData, value: string | number) => {
     setFormData(prev => ({
       ...prev,
@@ -116,6 +129,11 @@ export default function BuyOrderModal({ isOpen, onClose, stock, onOrderPlaced }:
     setIsSubmitting(true);
     setError(null);
 
+    // Get the selected account to use its leverage and riskOnCapital for INTRADAY orders
+    const selectedAccount = accounts.find(
+      (account) => account.accountId.toString() === selectedAccountId
+    );
+
     try {
       const response = await fetch('/api/place-order', {
         method: 'POST',
@@ -131,8 +149,13 @@ export default function BuyOrderModal({ isOpen, onClose, stock, onOrderPlaced }:
           ticker: stock.symbol,
           currentPrice: formData.executionType === 'LIMIT' ? formData.price : stock.currentPrice,
           customSettings: {
-            leverage: formData.productType === 'INTRADAY' ? 2 : 1,
-            riskOnCapital: formData.productType === 'INTRADAY' ? 0.5 : 1.0
+            availableFunds: customAvailableFunds,
+            leverage: formData.productType === 'INTRADAY' 
+              ? (selectedAccount?.leverage ?? 2) 
+              : 1,
+            riskOnCapital: formData.productType === 'INTRADAY' 
+              ? (selectedAccount?.riskOnCapital ?? 1.0) 
+              : 1.0
           }
         })
       });
@@ -230,6 +253,25 @@ export default function BuyOrderModal({ isOpen, onClose, stock, onOrderPlaced }:
                       </option>
                     ))}
                   </select>
+                </div>
+
+                {/* Available Funds Input */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Available Funds (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={customAvailableFunds || ''}
+                    onChange={(e) => setCustomAvailableFunds(parseFloat(e.target.value) || 0)}
+                    step="0.01"
+                    min="0"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                    placeholder="Enter available funds"
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    This value will be used to calculate position size for all accounts. Defaults to the selected account's available funds.
+                  </p>
                 </div>
 
                 {/* Execution Type */}
