@@ -270,7 +270,7 @@ export default function BuyOrderModal({ isOpen, onClose, stock, onOrderPlaced }:
                     placeholder="Enter available funds"
                   />
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    This value will be used to calculate position size for all accounts. Defaults to the selected account's available funds.
+                    This value will be used to calculate position size for all accounts. Defaults to the selected account&apos;s available funds.
                   </p>
                 </div>
 
