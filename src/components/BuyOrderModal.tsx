@@ -143,6 +143,7 @@ export default function BuyOrderModal({ isOpen, onClose, stock, onOrderPlaced }:
         },
         body: JSON.stringify({
           placeInAllAccounts: true,
+          skipSlTp: true, // BuyOrderModal orders don't need SL/TP
           orderType: 'BUY',
           executionType: formData.executionType,
           productType: formData.productType,

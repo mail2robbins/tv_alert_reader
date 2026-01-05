@@ -224,6 +224,7 @@ async function handleManualOrderAllAccounts(body: {
   productType?: 'CNC' | 'INTRADAY';
   ticker: string;
   currentPrice: number;
+  skipSlTp?: boolean;
   customSettings?: {
     availableFunds?: number;
     leverage?: number;
@@ -262,7 +263,7 @@ async function handleManualOrderAllAccounts(body: {
       );
     }
 
-    const { orderType, executionType, productType, ticker, currentPrice, customSettings } = body;
+    const { orderType, executionType, productType, ticker, currentPrice, skipSlTp, customSettings } = body;
 
     // Get all active account configurations
     const config = await loadAccountConfigurations();
@@ -335,7 +336,8 @@ async function handleManualOrderAllAccounts(body: {
           useAutoPositionSizing: true,
           exchangeSegment: process.env.DHAN_EXCHANGE_SEGMENT || 'NSE_EQ',
           productType: productType || process.env.DHAN_PRODUCT_TYPE || 'INTRADAY',
-          orderType: executionType || 'MARKET'
+          orderType: executionType || 'MARKET',
+          skipSlTp: skipSlTp // Pass skipSlTp flag to skip SL/TP for BuyOrderModal orders
         });
 
         dhanResponses.push(dhanResponse);
@@ -366,15 +368,21 @@ async function handleManualOrderAllAccounts(body: {
     const successfulOrders = dhanResponses.filter(resp => resp.success);
     const failedOrders = dhanResponses.filter(resp => !resp.success);
 
-    // Use improved rebase approach - process all accounts at once
-    console.log(`🔄 [MANUAL-ALL-REBASE] Triggering improved rebase for ${successfulOrders.length} successful orders across ${userAccounts.length} accounts`);
-    const rebaseResults = await rebaseQueueManager.processAllAccountsOrdersNeedingRebase(userAccounts);
-    
-    console.log(`✅ [MANUAL-ALL-REBASE] Rebase completed:`, {
-      accountsProcessed: rebaseResults.size,
-      totalOrders: Array.from(rebaseResults.values()).flat().length,
-      successfulRebases: Array.from(rebaseResults.values()).flat().filter(r => r.success).length
-    });
+    // Skip rebase for BuyOrderModal orders (no SL/TP to rebase)
+    let rebaseResults = new Map();
+    if (skipSlTp) {
+      console.log(`⏭️ [MANUAL-ALL-REBASE] Skipping rebase for BuyOrderModal order (skipSlTp=true, no SL/TP)`);
+    } else {
+      // Use improved rebase approach - process all accounts at once
+      console.log(`🔄 [MANUAL-ALL-REBASE] Triggering improved rebase for ${successfulOrders.length} successful orders across ${userAccounts.length} accounts`);
+      rebaseResults = await rebaseQueueManager.processAllAccountsOrdersNeedingRebase(userAccounts);
+      
+      console.log(`✅ [MANUAL-ALL-REBASE] Rebase completed:`, {
+        accountsProcessed: rebaseResults.size,
+        totalOrders: Array.from(rebaseResults.values()).flat().length,
+        successfulRebases: Array.from(rebaseResults.values()).flat().filter(r => r.success).length
+      });
+    }
 
     return NextResponse.json(
       { 

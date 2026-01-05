@@ -246,6 +246,7 @@ export async function placeDhanOrderForAccount(
     stopLossPrice?: number;
     useAutoPositionSizing?: boolean;
     trailingJump?: number;
+    skipSlTp?: boolean;
   }
 ): Promise<DhanOrderResponse> {
   // Check if duplicate ticker orders are allowed for this account
@@ -376,14 +377,20 @@ export async function placeDhanOrderForAccount(
     orderType: orderType,
     securityId: securityId,
     quantity: quantity,
-    price: orderPrice,
-    targetPrice: orderConfig?.targetPrice || (positionCalculation?.targetPrice),
-    stopLossPrice: orderConfig?.stopLossPrice || (positionCalculation?.stopLossPrice)
+    price: orderPrice
   };
 
-  // Only add trailingJump if trailing stop loss is enabled
-  if (accountConfig.enableTrailingStopLoss) {
-    orderRequest.trailingJump = accountConfig.minTrailJump;
+  // Only add SL/TP/Trailing SL if skipSlTp is not set (for BuyOrderModal orders)
+  if (!orderConfig?.skipSlTp) {
+    orderRequest.targetPrice = orderConfig?.targetPrice || (positionCalculation?.targetPrice);
+    orderRequest.stopLossPrice = orderConfig?.stopLossPrice || (positionCalculation?.stopLossPrice);
+    
+    // Only add trailingJump if trailing stop loss is enabled
+    if (accountConfig.enableTrailingStopLoss) {
+      orderRequest.trailingJump = accountConfig.minTrailJump;
+    }
+  } else {
+    console.log(`⏭️ Skipping SL/TP/Trailing SL for BuyOrderModal order (skipSlTp=true)`);
   }
 
   try {
