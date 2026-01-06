@@ -246,7 +246,7 @@ export async function placeDhanOrderForAccount(
     stopLossPrice?: number;
     useAutoPositionSizing?: boolean;
     trailingJump?: number;
-    skipSlTp?: boolean;
+    isCncOrder?: boolean;
   }
 ): Promise<DhanOrderResponse> {
   // Check if duplicate ticker orders are allowed for this account
@@ -380,17 +380,41 @@ export async function placeDhanOrderForAccount(
     price: orderPrice
   };
 
-  // Only add SL/TP/Trailing SL if skipSlTp is not set (for BuyOrderModal orders)
-  if (!orderConfig?.skipSlTp) {
+  // Use CNC-specific SL/TP for CNC orders, regular SL/TP for INTRADAY orders
+  if (orderConfig?.isCncOrder) {
+    // CNC orders: Use CNC-specific SL/TP percentages, no trailing SL
+    console.log(`📊 Using CNC-specific SL/TP config for CNC order (isCncOrder=true)`);
+    
+    // Calculate CNC-specific SL/TP based on account config
+    const cncStopLossPrice = alert.signal === 'BUY' 
+      ? alert.price * (1 - accountConfig.cncStopLossPercentage)
+      : alert.price * (1 + accountConfig.cncStopLossPercentage);
+    
+    const cncTargetPrice = alert.signal === 'BUY'
+      ? alert.price * (1 + accountConfig.cncTargetPricePercentage)
+      : alert.price * (1 - accountConfig.cncTargetPricePercentage);
+    
+    orderRequest.targetPrice = cncTargetPrice;
+    orderRequest.stopLossPrice = cncStopLossPrice;
+    
+    console.log(`📊 CNC SL/TP calculated:`, {
+      price: alert.price,
+      stopLossPrice: cncStopLossPrice,
+      targetPrice: cncTargetPrice,
+      cncStopLossPercentage: accountConfig.cncStopLossPercentage,
+      cncTargetPricePercentage: accountConfig.cncTargetPricePercentage
+    });
+    
+    // No trailing SL for CNC orders
+  } else {
+    // INTRADAY orders: Use regular SL/TP with trailing SL if enabled
     orderRequest.targetPrice = orderConfig?.targetPrice || (positionCalculation?.targetPrice);
     orderRequest.stopLossPrice = orderConfig?.stopLossPrice || (positionCalculation?.stopLossPrice);
     
-    // Only add trailingJump if trailing stop loss is enabled
+    // Only add trailingJump if trailing stop loss is enabled for INTRADAY orders
     if (accountConfig.enableTrailingStopLoss) {
       orderRequest.trailingJump = accountConfig.minTrailJump;
     }
-  } else {
-    console.log(`⏭️ Skipping SL/TP/Trailing SL for BuyOrderModal order (skipSlTp=true)`);
   }
 
   try {

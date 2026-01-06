@@ -224,7 +224,7 @@ async function handleManualOrderAllAccounts(body: {
   productType?: 'CNC' | 'INTRADAY';
   ticker: string;
   currentPrice: number;
-  skipSlTp?: boolean;
+  isCncOrder?: boolean;
   customSettings?: {
     availableFunds?: number;
     leverage?: number;
@@ -263,7 +263,7 @@ async function handleManualOrderAllAccounts(body: {
       );
     }
 
-    const { orderType, executionType, productType, ticker, currentPrice, skipSlTp, customSettings } = body;
+    const { orderType, executionType, productType, ticker, currentPrice, isCncOrder, customSettings } = body;
 
     // Get all active account configurations
     const config = await loadAccountConfigurations();
@@ -337,7 +337,7 @@ async function handleManualOrderAllAccounts(body: {
           exchangeSegment: process.env.DHAN_EXCHANGE_SEGMENT || 'NSE_EQ',
           productType: productType || process.env.DHAN_PRODUCT_TYPE || 'INTRADAY',
           orderType: executionType || 'MARKET',
-          skipSlTp: skipSlTp // Pass skipSlTp flag to skip SL/TP for BuyOrderModal orders
+          isCncOrder: isCncOrder // Pass isCncOrder flag to use CNC-specific SL/TP config
         });
 
         dhanResponses.push(dhanResponse);
@@ -368,10 +368,10 @@ async function handleManualOrderAllAccounts(body: {
     const successfulOrders = dhanResponses.filter(resp => resp.success);
     const failedOrders = dhanResponses.filter(resp => !resp.success);
 
-    // Skip rebase for BuyOrderModal orders (no SL/TP to rebase)
+    // Skip rebase for CNC orders (no rebase needed for CNC orders)
     let rebaseResults = new Map();
-    if (skipSlTp) {
-      console.log(`⏭️ [MANUAL-ALL-REBASE] Skipping rebase for BuyOrderModal order (skipSlTp=true, no SL/TP)`);
+    if (isCncOrder) {
+      console.log(`⏭️ [MANUAL-ALL-REBASE] Skipping rebase for CNC order (isCncOrder=true)`);
     } else {
       // Use improved rebase approach - process all accounts at once
       console.log(`🔄 [MANUAL-ALL-REBASE] Triggering improved rebase for ${successfulOrders.length} successful orders across ${userAccounts.length} accounts`);
@@ -596,6 +596,9 @@ export async function POST(request: NextRequest) {
       let rebaseResult = null;
       if (dhanResponse.success && dhanResponse.orderId) {
         // For legacy mode, we need to get the account config from environment variables
+        const stopLossPercentage = parseFloat(process.env.STOP_LOSS_PERCENTAGE || '0.01');
+        const targetPricePercentage = parseFloat(process.env.TARGET_PRICE_PERCENTAGE || '0.015');
+        
         const legacyAccountConfig = {
           accountId: 1,
           accessToken: process.env.DHAN_ACCESS_TOKEN || '',
@@ -605,8 +608,10 @@ export async function POST(request: NextRequest) {
           maxPositionSize: parseFloat(process.env.MAX_POSITION_SIZE || '0.1'),
           minOrderValue: parseFloat(process.env.MIN_ORDER_VALUE || '1000'),
           maxOrderValue: parseFloat(process.env.MAX_ORDER_VALUE || '5000'),
-          stopLossPercentage: parseFloat(process.env.STOP_LOSS_PERCENTAGE || '0.01'),
-          targetPricePercentage: parseFloat(process.env.TARGET_PRICE_PERCENTAGE || '0.015'),
+          stopLossPercentage,
+          targetPricePercentage,
+          cncStopLossPercentage: parseFloat(process.env.CNC_STOP_LOSS_PERCENTAGE || String(stopLossPercentage)),
+          cncTargetPricePercentage: parseFloat(process.env.CNC_TARGET_PRICE_PERCENTAGE || String(targetPricePercentage)),
           riskOnCapital: parseFloat(process.env.RISK_ON_CAPITAL || '1.0'),
           isActive: true,
           enableTrailingStopLoss: process.env.ENABLE_TRAILING_STOP_LOSS === 'true',

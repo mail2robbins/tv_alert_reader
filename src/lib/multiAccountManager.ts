@@ -16,6 +16,8 @@ export interface DhanAccountConfig {
   maxOrderValue: number;
   stopLossPercentage: number;
   targetPricePercentage: number;
+  cncStopLossPercentage: number;
+  cncTargetPricePercentage: number;
   riskOnCapital: number;
   isActive: boolean;
   enableTrailingStopLoss: boolean;
@@ -55,6 +57,8 @@ async function _loadAccountConfigurationsInternal(): Promise<MultiAccountConfig>
           maxOrderValue: setting.maxOrderValue,
           stopLossPercentage: setting.stopLossPercentage,
           targetPricePercentage: setting.targetPricePercentage,
+          cncStopLossPercentage: setting.cncStopLossPercentage || setting.stopLossPercentage,
+          cncTargetPricePercentage: setting.cncTargetPricePercentage || setting.targetPricePercentage,
           riskOnCapital: setting.riskOnCapital,
           isActive: setting.isActive,
           enableTrailingStopLoss: setting.enableTrailingStopLoss,
@@ -83,6 +87,9 @@ async function _loadAccountConfigurationsInternal(): Promise<MultiAccountConfig>
       
       // Only add account if both access token and client ID are provided
       if (accessToken && clientId) {
+        const stopLossPercentage = parseFloat(process.env[`STOP_LOSS_PERCENTAGE_${i}`] || '0.01');
+        const targetPricePercentage = parseFloat(process.env[`TARGET_PRICE_PERCENTAGE_${i}`] || '0.015');
+        
         const account: DhanAccountConfig = {
           accountId: i,
           accessToken,
@@ -92,8 +99,10 @@ async function _loadAccountConfigurationsInternal(): Promise<MultiAccountConfig>
           maxPositionSize: parseFloat(process.env[`MAX_POSITION_SIZE_${i}`] || '0.1'),
           minOrderValue: parseFloat(process.env[`MIN_ORDER_VALUE_${i}`] || '1000'),
           maxOrderValue: parseFloat(process.env[`MAX_ORDER_VALUE_${i}`] || '5000'),
-          stopLossPercentage: parseFloat(process.env[`STOP_LOSS_PERCENTAGE_${i}`] || '0.01'),
-          targetPricePercentage: parseFloat(process.env[`TARGET_PRICE_PERCENTAGE_${i}`] || '0.015'),
+          stopLossPercentage,
+          targetPricePercentage,
+          cncStopLossPercentage: parseFloat(process.env[`CNC_STOP_LOSS_PERCENTAGE_${i}`] || String(stopLossPercentage)),
+          cncTargetPricePercentage: parseFloat(process.env[`CNC_TARGET_PRICE_PERCENTAGE_${i}`] || String(targetPricePercentage)),
           riskOnCapital: parseFloat(process.env[`RISK_ON_CAPITAL_${i}`] || '1.0'),
           isActive: true,
           enableTrailingStopLoss: process.env[`ENABLE_TRAILING_STOP_LOSS_${i}`] === 'true',
@@ -115,6 +124,9 @@ async function _loadAccountConfigurationsInternal(): Promise<MultiAccountConfig>
       const legacyClientId = process.env.DHAN_CLIENT_ID;
       
       if (legacyAccessToken && legacyClientId) {
+        const stopLossPercentage = parseFloat(process.env.STOP_LOSS_PERCENTAGE || '0.01');
+        const targetPricePercentage = parseFloat(process.env.TARGET_PRICE_PERCENTAGE || '0.015');
+        
         const legacyAccount: DhanAccountConfig = {
           accountId: 1,
           accessToken: legacyAccessToken,
@@ -124,8 +136,10 @@ async function _loadAccountConfigurationsInternal(): Promise<MultiAccountConfig>
           maxPositionSize: parseFloat(process.env.MAX_POSITION_SIZE || '0.1'),
           minOrderValue: parseFloat(process.env.MIN_ORDER_VALUE || '1000'),
           maxOrderValue: parseFloat(process.env.MAX_ORDER_VALUE || '5000'),
-          stopLossPercentage: parseFloat(process.env.STOP_LOSS_PERCENTAGE || '0.01'),
-          targetPricePercentage: parseFloat(process.env.TARGET_PRICE_PERCENTAGE || '0.015'),
+          stopLossPercentage,
+          targetPricePercentage,
+          cncStopLossPercentage: parseFloat(process.env.CNC_STOP_LOSS_PERCENTAGE || String(stopLossPercentage)),
+          cncTargetPricePercentage: parseFloat(process.env.CNC_TARGET_PRICE_PERCENTAGE || String(targetPricePercentage)),
           riskOnCapital: parseFloat(process.env.RISK_ON_CAPITAL || '1.0'),
           isActive: true,
           enableTrailingStopLoss: process.env.ENABLE_TRAILING_STOP_LOSS === 'true',
