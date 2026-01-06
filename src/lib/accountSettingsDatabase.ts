@@ -45,6 +45,8 @@ export async function initializeAccountSettingsTable(): Promise<void> {
         max_order_value DECIMAL(15,2) NOT NULL DEFAULT 50000,
         stop_loss_percentage DECIMAL(6,4) NOT NULL DEFAULT 0.01,
         target_price_percentage DECIMAL(6,4) NOT NULL DEFAULT 0.015,
+        cnc_stop_loss_percentage DECIMAL(6,4),
+        cnc_target_price_percentage DECIMAL(6,4),
         risk_on_capital DECIMAL(5,2) NOT NULL DEFAULT 2.0,
         enable_trailing_stop_loss BOOLEAN NOT NULL DEFAULT true,
         min_trail_jump DECIMAL(6,2) NOT NULL DEFAULT 0.05,
@@ -57,6 +59,13 @@ export async function initializeAccountSettingsTable(): Promise<void> {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
+    `);
+    
+    // Add CNC configuration columns if they don't exist (for existing tables)
+    await client.query(`
+      ALTER TABLE account_settings 
+      ADD COLUMN IF NOT EXISTS cnc_stop_loss_percentage DECIMAL(6,4) NULL DEFAULT 0.055,
+      ADD COLUMN IF NOT EXISTS cnc_target_price_percentage DECIMAL(6,4) NULL DEFAULT 0.095
     `);
 
     // Create index on dhan_client_id for faster lookups
@@ -104,6 +113,8 @@ export async function getAllAccountSettings(activeOnly: boolean = false): Promis
       maxOrderValue: parseFloat(row.max_order_value),
       stopLossPercentage: parseFloat(row.stop_loss_percentage),
       targetPricePercentage: parseFloat(row.target_price_percentage),
+      cncStopLossPercentage: parseFloat(row.cnc_stop_loss_percentage),
+      cncTargetPricePercentage: parseFloat(row.cnc_target_price_percentage),
       riskOnCapital: parseFloat(row.risk_on_capital),
       enableTrailingStopLoss: row.enable_trailing_stop_loss,
       minTrailJump: parseFloat(row.min_trail_jump),
@@ -200,6 +211,8 @@ export async function getAccountSettingsById(id: number): Promise<AccountSetting
       maxOrderValue: parseFloat(row.max_order_value),
       stopLossPercentage: parseFloat(row.stop_loss_percentage),
       targetPricePercentage: parseFloat(row.target_price_percentage),
+      cncStopLossPercentage: parseFloat(row.cnc_stop_loss_percentage),
+      cncTargetPricePercentage: parseFloat(row.cnc_target_price_percentage),
       riskOnCapital: parseFloat(row.risk_on_capital),
       enableTrailingStopLoss: row.enable_trailing_stop_loss,
       minTrailJump: parseFloat(row.min_trail_jump),
@@ -231,10 +244,10 @@ export async function createAccountSettings(settings: Omit<AccountSettings, 'id'
       `INSERT INTO account_settings (
         dhan_client_id, dhan_access_token, available_funds, leverage,
         max_position_size, min_order_value, max_order_value,
-        stop_loss_percentage, target_price_percentage, risk_on_capital,
-        enable_trailing_stop_loss, min_trail_jump, rebase_tp_and_sl,
+        stop_loss_percentage, target_price_percentage, cnc_stop_loss_percentage, cnc_target_price_percentage,
+        risk_on_capital, enable_trailing_stop_loss, min_trail_jump, rebase_tp_and_sl,
         rebase_threshold_percentage, allow_duplicate_tickers, order_type, limit_buffer_percentage, is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
       RETURNING *`,
       [
         settings.dhanClientId,
@@ -246,6 +259,8 @@ export async function createAccountSettings(settings: Omit<AccountSettings, 'id'
         settings.maxOrderValue,
         settings.stopLossPercentage,
         settings.targetPricePercentage,
+        settings.cncStopLossPercentage,
+        settings.cncTargetPricePercentage,
         settings.riskOnCapital,
         settings.enableTrailingStopLoss,
         settings.minTrailJump,
@@ -270,6 +285,8 @@ export async function createAccountSettings(settings: Omit<AccountSettings, 'id'
       maxOrderValue: parseFloat(row.max_order_value),
       stopLossPercentage: parseFloat(row.stop_loss_percentage),
       targetPricePercentage: parseFloat(row.target_price_percentage),
+      cncStopLossPercentage: parseFloat(row.cnc_stop_loss_percentage),
+      cncTargetPricePercentage: parseFloat(row.cnc_target_price_percentage),
       riskOnCapital: parseFloat(row.risk_on_capital),
       enableTrailingStopLoss: row.enable_trailing_stop_loss,
       minTrailJump: parseFloat(row.min_trail_jump),
@@ -336,6 +353,14 @@ export async function updateAccountSettings(id: number, settings: Partial<Omit<A
     if (settings.targetPricePercentage !== undefined) {
       updates.push(`target_price_percentage = $${paramIndex++}`);
       values.push(settings.targetPricePercentage);
+    }
+    if (settings.cncStopLossPercentage !== undefined) {
+      updates.push(`cnc_stop_loss_percentage = $${paramIndex++}`);
+      values.push(settings.cncStopLossPercentage);
+    }
+    if (settings.cncTargetPricePercentage !== undefined) {
+      updates.push(`cnc_target_price_percentage = $${paramIndex++}`);
+      values.push(settings.cncTargetPricePercentage);
     }
     if (settings.riskOnCapital !== undefined) {
       updates.push(`risk_on_capital = $${paramIndex++}`);

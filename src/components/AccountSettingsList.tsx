@@ -82,12 +82,24 @@ export default function AccountSettingsList({
                   <p className="font-medium text-gray-900 dark:text-white">{account.limitBufferPercentage.toFixed(2)}%</p>
                 </div>
                 <div>
-                  <p className="text-gray-500 dark:text-gray-400">Stop Loss</p>
+                  <p className="text-gray-500 dark:text-gray-400">Stop Loss (INTRADAY)</p>
                   <p className="font-medium text-gray-900 dark:text-white">{(account.stopLossPercentage * 100).toFixed(2)}%</p>
                 </div>
                 <div>
-                  <p className="text-gray-500 dark:text-gray-400">Target Price</p>
+                  <p className="text-gray-500 dark:text-gray-400">Target Price (INTRADAY)</p>
                   <p className="font-medium text-gray-900 dark:text-white">{(account.targetPricePercentage * 100).toFixed(2)}%</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400">CNC Stop Loss</p>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {account.cncStopLossPercentage ? `${(account.cncStopLossPercentage * 100).toFixed(2)}%` : 'Not Set'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400">CNC Target Price</p>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {account.cncTargetPricePercentage ? `${(account.cncTargetPricePercentage * 100).toFixed(2)}%` : 'Not Set'}
+                  </p>
                 </div>
                 <div>
                   <p className="text-gray-500 dark:text-gray-400">Trailing SL</p>

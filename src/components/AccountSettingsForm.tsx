@@ -29,6 +29,8 @@ export default function AccountSettingsForm({
     maxOrderValue: 50000,
     stopLossPercentage: 0.01,
     targetPricePercentage: 0.015,
+    cncStopLossPercentage: 0.09,
+    cncTargetPricePercentage: 0.025,
     riskOnCapital: 2.0,
     enableTrailingStopLoss: true,
     minTrailJump: 0.05,
@@ -225,6 +227,38 @@ export default function AccountSettingsForm({
                 disabled={isSubmitting}
                 value={formData.targetPricePercentage || 0}
                 onChange={(e) => handleInputChange('targetPricePercentage', parseFloat(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                CNC Stop Loss % (0-1)
+              </label>
+              <input
+                type="number"
+                step="0.0001"
+                min="0"
+                max="1"
+                disabled={isSubmitting}
+                value={formData.cncStopLossPercentage ?? ''}
+                onChange={(e) => handleInputChange('cncStopLossPercentage', parseFloat(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                CNC Target Price % (0-1)
+              </label>
+              <input
+                type="number"
+                step="0.0001"
+                min="0"
+                max="1"
+                disabled={isSubmitting}
+                value={formData.cncTargetPricePercentage ?? ''}
+                onChange={(e) => handleInputChange('cncTargetPricePercentage', parseFloat(e.target.value))}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>

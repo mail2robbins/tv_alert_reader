@@ -130,6 +130,8 @@ export async function POST(request: NextRequest) {
       maxOrderValue: body.maxOrderValue ?? 50000,
       stopLossPercentage: body.stopLossPercentage ?? 0.01,
       targetPricePercentage: body.targetPricePercentage ?? 0.015,
+      cncStopLossPercentage: body.cncStopLossPercentage,
+      cncTargetPricePercentage: body.cncTargetPricePercentage,
       riskOnCapital: body.riskOnCapital ?? 2.0,
       enableTrailingStopLoss: body.enableTrailingStopLoss ?? true,
       minTrailJump: body.minTrailJump ?? 0.05,

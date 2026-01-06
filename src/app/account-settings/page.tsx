@@ -18,6 +18,8 @@ export interface AccountSettings {
   maxOrderValue: number;
   stopLossPercentage: number;
   targetPricePercentage: number;
+  cncStopLossPercentage?: number;
+  cncTargetPricePercentage?: number;
   riskOnCapital: number;
   enableTrailingStopLoss: boolean;
   minTrailJump: number;
